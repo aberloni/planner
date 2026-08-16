@@ -47,7 +47,11 @@ const Mesure = {
     Viewport.panDesactive = true;
     this.svg.classList.add("mesure-active");
     this.bouton.classList.add("actif");
-    Statut.definir("Mesurer : cliquez sur le plan pour mesurer.");
+    // Verrouille le reste de l'UI (barre d'outils, boutons flottants,
+    // panneaux) tant que la mesure n'est pas terminée ou annulée — évite de
+    // se retrouver avec un autre outil démarré par-dessus une mesure en cours.
+    document.body.classList.add("mesure-exclusive");
+    Statut.definir(I18n.t("mesure.clique_plan"));
   },
 
   arreter() {
@@ -57,6 +61,7 @@ const Mesure = {
     Viewport.panDesactive = false;
     this.svg.classList.remove("mesure-active");
     this.bouton.classList.remove("actif");
+    document.body.classList.remove("mesure-exclusive");
     this._effacerOverlay();
   },
 
@@ -119,7 +124,7 @@ const Mesure = {
 
     this.glisse.ligne.setAttribute("x2", point.x);
     this.glisse.ligne.setAttribute("y2", point.y);
-    Statut.definir(`Mesurer : ${this._texteDistance(this.glisse.depart, point)}`);
+    Statut.definir(I18n.t("mesure.distance", { texte: this._texteDistance(this.glisse.depart, point) }));
   },
 
   _surPointerUp(evenement) {
@@ -143,7 +148,7 @@ const Mesure = {
     if (this.points.length === 1) {
       this._creerOverlay();
       this._dessinerPoint(point);
-      Statut.definir("Mesurer : cliquez sur le second point.");
+      Statut.definir(I18n.t("mesure.clique_second_point"));
       return;
     }
 
@@ -154,10 +159,10 @@ const Mesure = {
     this.points = [];
     this._effacerOverlay();
     if (!Echelle.pxParCm) {
-      Statut.definir("Mesurer : échelle non définie, impossible de convertir en cm.");
+      Statut.definir(I18n.t("mesure.echelle_non_definie"));
       return;
     }
-    Statut.definir(`Distance mesurée : ${this._texteDistance(a, b)}`);
+    Statut.definir(I18n.t("mesure.resultat", { texte: this._texteDistance(a, b) }));
   },
 
   // Formate la distance entre deux points (coordonnées viewBox) en cm/m selon
@@ -165,7 +170,7 @@ const Mesure = {
   // cliquer-glisser et pour le résultat final.
   _texteDistance(a, b) {
     const distancePx = Math.hypot(b.x - a.x, b.y - a.y);
-    if (!Echelle.pxParCm) return "échelle non définie.";
+    if (!Echelle.pxParCm) return I18n.t("mesure.echelle_non_definie_texte");
     const cm = distancePx / Echelle.pxParCm;
     return cm >= 100 ? `${(cm / 100).toFixed(2)} m` : `${Math.round(cm)} cm`;
   }

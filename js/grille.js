@@ -12,7 +12,23 @@ const Grille = {
   init(canvasEl) {
     this.canvas = canvasEl;
     this.ctx = canvasEl.getContext("2d");
-    window.addEventListener("resize", () => this.redessiner());
+    this.redimensionner();
+    window.addEventListener("resize", () => this.redimensionner());
+  },
+
+  // Re-mesure le canvas puis redessine — à appeler explicitement quand la
+  // zone de travail passe de caché à visible (ex. fermeture de l'écran de
+  // choix de plan) : clientWidth/Height valaient 0 tant qu'elle était en
+  // `display:none`, donc le redimensionnement fait à l'init() était inutile
+  // et restait faux jusqu'au prochain resize fenêtre.
+  redimensionner() {
+    this._redimensionner();
+    this.redessiner();
+  },
+
+  _redimensionner() {
+    this.canvas.width = this.canvas.clientWidth;
+    this.canvas.height = this.canvas.clientHeight;
   },
 
   // Fait avancer le cycle désactivée -> 2 cellules -> 4 cellules -> désactivée.
@@ -23,10 +39,10 @@ const Grille = {
     return { actif: this.niveau > 0, subdivisions: this.SUBDIVISIONS[this.niveau] };
   },
 
+  // Redessine sans re-mesurer/redimensionner le canvas : voir le même
+  // commentaire dans regles.js — appelé à chaque pan/zoom, un resize à
+  // chaque fois forçait un reflow synchrone et faisait ramer le pan.
   redessiner() {
-    this.canvas.width = this.canvas.clientWidth;
-    this.canvas.height = this.canvas.clientHeight;
-
     const subdivisions = this.SUBDIVISIONS[this.niveau];
     if (!subdivisions || !Viewport.largeurPlan || !Echelle.pxParCm) {
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);

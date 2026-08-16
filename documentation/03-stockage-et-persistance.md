@@ -2,9 +2,9 @@
 
 Pas de base de données. Deux mécanismes complémentaires, actifs **dans tous
 les cas** : auto-sauvegarde locale et export/import de fichier `.json`.
-S'y ajoute, au démarrage, le choix d'une **session** — voir
-[20-sessions.md](20-sessions.md) — qui détermine où l'auto-sauvegarde
-écrit réellement (localStorage seul, ou aussi `sessions/*.json` via PHP en
+S'y ajoute, au démarrage, le choix d'un **plan** — voir
+[20-plans.md](20-plans.md) — qui détermine où l'auto-sauvegarde
+écrit réellement (localStorage seul, ou aussi `plans/*.json` via PHP en
 mode servi).
 
 ## 1. Auto-sauvegarde locale (`localStorage`)
@@ -13,15 +13,15 @@ mode servi).
   l'état courant du projet est sérialisé en JSON et écrit dans
   `localStorage`, sous une clé fixe (`planner-projet`, voir
   [js/stockage.js](../js/stockage.js)) qui sert de filet de sécurité
-  indépendamment de la session active.
-- En mode local (ouverture `file://`), la session active elle-même est
-  aussi stockée dans `localStorage`, sous sa propre clé — voir
-  [20-sessions.md](20-sessions.md).
+  indépendamment du plan actif.
+- En mode local (ouverture `file://`), le plan actif lui-même est
+  aussi stocké dans `localStorage`, sous sa propre clé — voir
+  [20-plans.md](20-plans.md).
 - Rien n'est restauré automatiquement au chargement de l'app : l'utilisateur
-  choisit sa session sur l'écran d'accueil (voir
-  [20-sessions.md](20-sessions.md)).
+  choisit son plan sur l'écran d'accueil (voir
+  [20-plans.md](20-plans.md)).
 - Limite connue : `localStorage` est limité en taille (~5-10 Mo selon
-  navigateur) et l'image du plan (encodée en base64) peut être volumineuse.
+  navigateur) et l'image du blueprint (encodée en base64) peut être volumineuse.
   Si le quota est dépassé, l'auto-sauvegarde échoue silencieusement — faire
   un export `.json` manuel comme sauvegarde durable en cas de doute.
 - `localStorage` est propre à un navigateur/profil sur une machine : ce n'est
@@ -40,7 +40,7 @@ C'est le mécanisme de sauvegarde **durable et transportable** :
 - **Import** : bouton "Ouvrir un projet..." avec `<input type="file">`
   filtré sur `.json`, qui relit et restaure l'état complet.
 - Le fichier JSON contient **tout** ce qui est nécessaire pour restaurer le
-  projet à l'identique, y compris l'image du plan encodée en base64 (voir
+  projet à l'identique, y compris l'image du blueprint encodée en base64 (voir
   [04-modele-de-donnees.md](04-modele-de-donnees.md)) — un seul fichier =
   un projet complet et portable, pas de dépendance à un chemin d'image
   externe.
@@ -66,5 +66,5 @@ fichier à l'export, comme n'importe quel "Enregistrer sous..." classique.
 - Pas de sauvegarde automatique sur disque en mode local (nécessiterait la
   File System Access API, disponible uniquement sur Chrome/Edge — à évaluer
   en v2 si jugé utile, voir [09-roadmap.md](09-roadmap.md)). En mode servi,
-  ce besoin est couvert par `sessions/*.json` (voir
-  [20-sessions.md](20-sessions.md)).
+  ce besoin est couvert par `plans/*.json` (voir
+  [20-plans.md](20-plans.md)).

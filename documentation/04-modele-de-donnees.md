@@ -10,13 +10,11 @@ l'auto-sauvegarde (`localStorage`) que pour l'export/import de fichier
 {
   "version": 1,                     // version du format, pour migrations futures
   "id": "7d6e5f4a-...",             // identifiant unique, nom de fichier par défaut à l'export
-  "nom": "Maison Dupont",           // optionnel, nom de la session (voir 20-sessions.md), affiché sur sa carte
-  "plan": { /* voir Plan */ },            // partagé
+  "nom": "Maison Dupont",           // optionnel, nom du plan (voir 20-plans.md), affiché sur sa carte
+  "plan": { /* voir Blueprint */ },       // partagé — champ nommé "plan" pour compat, contient le blueprint
   "habillage": [ /* voir Habillage */ ],  // partagé
-  "catalogue": [ /* voir ModeleObjet */ ],// partagé, grandit au fil de l'eau
-  "catalogueId": "9f8e7d6c-...",    // identifiant du catalogue, nom de fichier par défaut à son export
   "cadreExport": { "x": 0, "y": 0, "largeur": 1200, "hauteur": 800 }, // voir 19-export-png.md
-  "utilisateurs": [ /* voir Utilisateur */ ] // chacun avec ses propres meubles
+  "propositions": [ /* voir Proposition */ ] // chacune avec ses propres meubles
 }
 ```
 
@@ -29,14 +27,17 @@ l'auto-sauvegarde (`localStorage`) que pour l'export/import de fichier
   [03-stockage-et-persistance.md](03-stockage-et-persistance.md)). Un
   fichier projet sans `id` (ancien format) s'en voit attribuer un nouveau
   à l'ouverture.
-- `catalogueId` : même principe, propre au catalogue (voir
-  [17-catalogue.md](17-catalogue.md)) — reste stable tant que le
-  catalogue n'est pas remplacé par un import d'un autre fichier catalogue
-  (auquel cas il reprend l'`id` du fichier importé).
-- `nom` : nom de la session choisi à sa création (voir
-  [20-sessions.md](20-sessions.md)), affiché sur sa carte dans l'écran de
+- `nom` : nom du plan choisi à sa création (voir
+  [20-plans.md](20-plans.md)), affiché sur sa carte dans l'écran de
   choix. Absent/`null` sur les fichiers exportés manuellement en dehors du
-  système de sessions (repli sur `id` à l'affichage).
+  système de plans (repli sur `id` à l'affichage).
+- **Pas de `catalogue`/`catalogueId` sur `Projet`** : le catalogue est
+  global, partagé par tous les plans, avec sa propre structure et sa
+  propre persistance — voir `CatalogueGlobal` plus bas et
+  [20-plans.md](20-plans.md). Un `Projet` exporté avant ce changement peut
+  encore porter un `catalogue` embarqué (ancien format) : à l'import, ce
+  champ est simplement **ignoré** (pas de migration, voir "Ce qui n'est
+  pas prévu" dans [20-plans.md](20-plans.md)).
 
 ## `Plan`
 
@@ -55,9 +56,9 @@ l'auto-sauvegarde (`localStorage`) que pour l'export/import de fichier
   pour dimensionner la zone de travail (le viewport SVG) à l'import.
 - `echellePxParCm` : défini par calibration (l'utilisateur trace un segment
   sur le plan et indique sa longueur réelle en cm). Sert aux règles
-  graduées des axes X/Y. Les meubles restent dimensionnés en pixels dans le
-  MVP (pas de conversion cm sur les meubles — voir
-  [09-roadmap.md](09-roadmap.md)).
+  graduées des axes X/Y, et à convertir la taille réelle (cm) d'un
+  `ModeleObjet` du catalogue en dimensions px au moment où une instance
+  est posée (voir `ModeleObjet` plus bas).
 
 ## `Meuble`
 
@@ -83,9 +84,13 @@ l'auto-sauvegarde (`localStorage`) que pour l'export/import de fichier
   (plus simple pour la rotation, qui pivote autour du centre), en pixels,
   dans le référentiel de l'image du plan (0,0 = coin haut-gauche du plan).
 - `largeur`/`hauteur` : dimensions du rectangle **avant rotation**, en
-  pixels. Attribut du prefab (catalogue), partagé entre ses instances —
-  modifiables depuis le catalogue ou l'inspecteur, pas de poignée sur le
-  plan (voir [13-inspecteur.md](13-inspecteur.md), [17-catalogue.md](17-catalogue.md)
+  **pixels** — dérivées de la taille réelle (cm) du `ModeleObjet` d'origine
+  via `Echelle.pxParCm` au moment où l'instance est posée (voir
+  `ajouterDepuisModele` dans [js/objets.js](../js/objets.js)) ; figées
+  ensuite (un recalibrage de l'échelle ne change pas la taille à l'écran
+  des meubles déjà posés). Modifiables depuis le catalogue ou l'inspecteur
+  (reconverties en cm à l'affichage), pas de poignée sur le plan (voir
+  [13-inspecteur.md](13-inspecteur.md), [17-catalogue.md](17-catalogue.md)
   et [07-interactions-techniques.md](07-interactions-techniques.md)).
 - `type` : voir [14-types-objets.md](14-types-objets.md) — détermine la
   couleur d'affichage (pas de champ `couleur` séparé, dérivée du type).
@@ -163,40 +168,86 @@ s'il doit afficher les champs correspondants, mais affiche toujours
   "id": "9c8b7a6d-...",
   "nom": "Canapé du salon",
   "type": "canape",
-  "largeur": 180,   // en px, taille par défaut à la pose
-  "hauteur": 80,
+  "largeur": 180,   // en CM (taille réelle du meuble, donnée brute)
+  "hauteur": 80,    // en CM
   "hauteurCm": null // hauteur réelle verticale, en cm
 }
 ```
 
 Voir [17-catalogue.md](17-catalogue.md) : catalogue partagé, sans rien de
-prédéfini, qui grandit au fil de l'eau. Un `Meuble.modeleId` référence
+prédéfini, qui grandit au fil de l'eau. **`largeur`/`hauteur` sont la
+donnée brute saisie par l'utilisateur (cm), indépendante de tout plan** —
+contrairement à `Meuble.largeur`/`hauteur` (px), qui n'existent que
+**dérivées** de ces cm au moment où une instance est posée sur un plan
+donné (voir note sur `Meuble` plus haut). Un `Meuble.modeleId` référence
 l'entrée dont il a été posé (pas de lien vivant : modifier l'instance
 posée — taille, rotation, nom — ne modifie pas l'entrée du catalogue,
-**sauf** `type` et `hauteurCm`, reportés sur l'entrée d'origine pour
-garder l'icône du panneau catalogue à jour et propager la hauteur réelle
-aux poses suivantes du même modèle).
+**sauf** `type`, `hauteurCm` et les dimensions (reconverties px→cm),
+reportés sur l'entrée d'origine pour garder l'icône du panneau catalogue à
+jour et propager la taille réelle aux poses suivantes du même modèle —
+voir `Catalogue.synchroniserDimensions` dans
+[js/catalogue.js](../js/catalogue.js)).
 
-## `Utilisateur`
+## `CatalogueGlobal`
+
+```jsonc
+{
+  "version": 1,
+  "id": "9f8e7d6c-...",              // identifiant unique, nom de fichier par défaut à l'export CSV
+  "catalogue": [ /* voir ModeleObjet ci-dessus */ ]
+}
+```
+
+C'est la forme sérialisée du catalogue **global** (partagé par tous les
+plans, voir [17-catalogue.md](17-catalogue.md)) telle que persistée par
+`CatalogueStockage` ([js/catalogue-stockage.js](../js/catalogue-stockage.js)) :
+une entrée `localStorage` unique en mode local, ou le fichier
+`catalogue/catalogue.json` en mode fichiers — voir
+[20-plans.md](20-plans.md). Distinct du `Projet` : ne voyage plus dedans.
+
+## Paquet d'export multi-plans
+
+```jsonc
+{
+  "version": 1,
+  "catalogue": [ /* voir ModeleObjet */ ],
+  "catalogueId": "9f8e7d6c-...",
+  "plans": [ /* un Projet complet par plan */ ]
+}
+```
+
+Format produit par "Enregistrer sous..." (voir
+[20-plans.md](20-plans.md)) — présence du tableau `plans` = ce format
+(plutôt qu'un `Projet` isolé, qui a un `plan` singulier et pas de
+`plans`). Un fichier dans ce format, réimporté via "Ouvrir un projet...",
+fusionne son `catalogue` dans le catalogue global et crée chaque entrée de
+`plans` comme un **nouveau** plan (jamais un écrasement).
+
+## `Proposition`
 
 ```jsonc
 {
   "id": "e5f6a7b8-...",
-  "nom": "Alice",
+  "nom": "Proposition 1",
   "meubles": [ /* voir Meuble */ ]
 }
 ```
 
-Voir [16-utilisateurs.md](16-utilisateurs.md) : chaque utilisateur porte
-sa propre proposition d'agencement (`meubles`). Le plan et l'habillage
-restent au niveau du `Projet`, pas dupliqués par utilisateur.
+Voir [16-propositions.md](16-propositions.md) : chaque proposition porte
+son propre agencement (`meubles`). Le blueprint et l'habillage
+restent au niveau du `Projet`, pas dupliqués par proposition.
 
 ## Notes de conception
 
-- **Échelle du plan, pas des meubles** : `Plan.echellePxParCm` sert
-  uniquement aux règles graduées (repère visuel). Les meubles restent en
-  pixels ; l'ajout de dimensions réelles sur `Meuble` (`largeurCm`/
-  `hauteurCm`) est prévu en v2 (voir [09-roadmap.md](09-roadmap.md)).
+- **La donnée réelle (cm) vit dans le catalogue, pas sur l'instance** :
+  `ModeleObjet.largeur`/`hauteur` sont la taille réelle du meuble, saisie
+  une fois par l'utilisateur, indépendante de tout plan. `Meuble.largeur`/
+  `hauteur` (px) en sont une **projection** sur un plan donné via
+  `Plan.echellePxParCm`, calculée à la pose et recalculée à chaque
+  redimensionnement (dans les deux sens : poser depuis le catalogue
+  convertit cm→px, redimensionner une instance reconvertit px→cm avant
+  d'écrire sur le modèle). Ça évite qu'un recalibrage de l'échelle change
+  rétroactivement le sens des tailles déjà stockées dans le catalogue.
 - **Ordre d'empilement (z-order)** : l'ordre des meubles dans le tableau
   `meubles` détermine l'ordre de superposition à l'affichage (le dernier de
   la liste est dessiné au-dessus). Une action "Mettre au premier plan /

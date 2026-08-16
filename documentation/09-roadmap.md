@@ -15,8 +15,10 @@ l'[architecture](01-architecture-technique.md).
   affichées à l'utilisateur en plus des pixels.
 - **Détection de chevauchement** entre meubles (alerte visuelle, pas
   forcément un blocage strict).
-- **Accrochage (snapping)** : aux bords d'autres meubles, à une grille
-  configurable, éventuellement aux bords du plan.
+- **Accrochage (snapping)** — *partiellement fait* : accroche à la grille
+  graduée (2/4 subdivisions) déjà implémentée, voir
+  [11-echelle-et-regles.md](11-echelle-et-regles.md). Reste en v2 :
+  accroche aux bords d'autres meubles, éventuellement aux bords du plan.
 
 ## v3 — Plus riche
 

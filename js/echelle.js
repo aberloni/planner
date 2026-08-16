@@ -31,7 +31,7 @@ const Echelle = {
     this.svg.appendChild(this.overlay);
     this.svg.classList.add("calibration-active");
 
-    Statut.definir("Échelle : cliquez sur le premier point du segment de référence sur le plan.");
+    Statut.definir(I18n.t("echelle.clic_premier_point"));
   },
 
   _surClic(point) {
@@ -40,7 +40,7 @@ const Echelle = {
     this._dessinerPoint(point);
 
     if (this.points.length === 1) {
-      Statut.definir("Échelle : cliquez sur le second point du segment de référence.");
+      Statut.definir(I18n.t("echelle.clic_second_point"));
     }
 
     if (this.points.length === 2) {
@@ -76,24 +76,24 @@ const Echelle = {
     const [a, b] = this.points;
     const distancePx = Math.hypot(b.x - a.x, b.y - a.y);
 
-    Statut.definir("Échelle : indiquez la longueur réelle de ce segment.");
+    Statut.definir(I18n.t("echelle.indiquez_longueur"));
 
     // setTimeout : laisse le segment s'afficher avant le prompt() bloquant.
     window.setTimeout(() => {
-      const saisie = prompt("Longueur réelle de ce segment, en centimètres :", "100");
+      const saisie = prompt(I18n.t("echelle.longueur_prompt"), "100");
       this.overlay.remove();
       this.overlay = null;
 
       const longueurCm = parseFloat(saisie);
       if (!saisie || isNaN(longueurCm) || longueurCm <= 0) {
-        Statut.definir("Échelle : calibration annulée.");
+        Statut.definir(I18n.t("echelle.calibration_annulee"));
         return;
       }
 
       this.pxParCm = distancePx / longueurCm;
       if (typeof Regles !== "undefined") Regles.redessiner();
       if (typeof Grille !== "undefined") Grille.redessiner();
-      Statut.definir(`Échelle définie : ${this.pxParCm.toFixed(2)} px/cm.`);
+      Statut.definir(I18n.t("echelle.definie", { valeur: this.pxParCm.toFixed(2) }));
       this.ecouteurs.forEach((callback) => callback());
     }, 0);
   }

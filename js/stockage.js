@@ -1,8 +1,8 @@
 // Filet de sécurité : dernier projet édité, toujours écrit en localStorage
-// sous une clé fixe quel que soit le mode (voir js/sessions.js) — permet de
-// ne rien perdre même en cas de souci d'écriture côté session active. N'est
-// jamais utilisé pour restaurer automatiquement une session au démarrage
-// (voir documentation/20-sessions.md).
+// sous une clé fixe quel que soit le mode (voir js/plans.js) — permet de
+// ne rien perdre même en cas de souci d'écriture côté plan actif. N'est
+// jamais utilisé pour restaurer automatiquement un plan au démarrage
+// (voir documentation/20-plans.md).
 const Stockage = {
 
   CLE: "planner-projet",

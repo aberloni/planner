@@ -1,31 +1,34 @@
 # Catalogue d'objets (partagé, évolutif)
 
-Les utilisateurs répartissent les objets d'une maison existante sur le
+Les propositions répartissent les objets d'une maison existante sur le
 nouveau plan. Ces objets ne sont **pas prédéfinis** — le catalogue
-démarre vide et grandit au fil de l'eau, à mesure que les utilisateurs
+démarre vide et grandit au fil de l'eau, à mesure que les propositions
 créent des objets.
 
 ## Principe
 
-- Un objet créé par un utilisateur (avec un **nom** propre, ex. "Canapé
-  du salon") devient immédiatement disponible pour **tous les autres
-  utilisateurs**, sans qu'ils aient à le recréer.
-- Le catalogue est **partagé** — comme le plan et l'habillage (voir
-  [16-utilisateurs.md](16-utilisateurs.md)) — au niveau du projet, pas
-  par utilisateur.
-- Un même objet du catalogue peut être **posé plusieurs fois** par un
-  même utilisateur, ou pas du tout par un autre — voir la discussion sur
+- Un objet créé depuis une proposition (avec un **nom** propre, ex. "Canapé
+  du salon") devient immédiatement disponible pour **toutes les autres
+  propositions**, sans qu'elles aient à le recréer.
+- Le catalogue est **global** : un seul catalogue, partagé par **tous les
+  plans** (tous les étages d'un même lieu, pas seulement les propositions
+  d'un même plan) — persistance à part de celle des plans, voir
+  [js/catalogue-stockage.js](../js/catalogue-stockage.js). Un objet créé
+  sur un étage est donc immédiatement posable sur les autres.
+- Un même objet du catalogue peut être **posé plusieurs fois** dans une
+  même proposition, ou pas du tout dans une autre — voir la discussion sur
   les types dans [14-types-objets.md](14-types-objets.md) (même logique,
   appliquée ici aux objets nommés plutôt qu'aux catégories).
 - Chaque pose (placement) reste une instance indépendante dans
   `Meubles.liste` de l'utilisateur qui l'a posée ; modifier une instance
-  posée (taille, rotation, nom) ne modifie **pas** le modèle du
-  catalogue — pas de propagation. Exceptions : le **type** et la
-  **hauteur réelle** (`hauteurCm`) d'une instance sont reportés sur son
-  modèle d'origine (`Catalogue.synchroniserType`/`synchroniserHauteurCm`
-  dans [js/catalogue.js](../js/catalogue.js)), pour que l'icône affichée
-  dans le panneau catalogue reste juste, et que la prochaine pose depuis
-  ce modèle hérite de la hauteur déjà renseignée.
+  posée (rotation, nom) ne modifie **pas** le modèle du catalogue — pas de
+  propagation. Exceptions : le **type**, la **hauteur réelle** (`hauteurCm`)
+  et la **taille** (largeur/profondeur, reconverties px→cm) d'une instance
+  sont reportés sur son modèle d'origine (`Catalogue.synchroniserType`/
+  `synchroniserHauteurCm`/`synchroniserDimensions` dans
+  [js/catalogue.js](../js/catalogue.js)), pour que l'icône affichée dans
+  le panneau catalogue reste juste, et que la prochaine pose depuis ce
+  modèle hérite de la taille/hauteur déjà renseignées.
 
 ## Interface
 
@@ -79,7 +82,11 @@ l'utilisateur).
 - **[js/catalogue.js](../js/catalogue.js)** : module `Catalogue`,
   `id` (identifiant unique du catalogue courant, nom de fichier par
   défaut à l'export) + `liste` =
-  `[{ id, nom, type, largeur, hauteur, hauteurCm }]`.
+  `[{ id, nom, type, largeur, hauteur, hauteurCm }]`. **`largeur`/`hauteur`
+  sont en CM** (taille réelle, donnée brute saisie par l'utilisateur,
+  indépendante de tout plan) — la conversion en px pour un plan donné est
+  toujours dérivée au contexte (pose d'une instance, rendu), jamais
+  stockée dans le catalogue. Voir [04-modele-de-donnees.md](04-modele-de-donnees.md).
 - **[js/objets.js](../js/objets.js)** : nouvelle méthode
   `ajouterDepuisModele(modele)` sur la fabrique (n'existe que pour les
   modules typés, donc `Meubles`) — crée une instance à partir d'un modèle

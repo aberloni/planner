@@ -41,7 +41,7 @@ const SidebarPlans = {
     if (!liste.length) {
       const vide = document.createElement("div");
       vide.className = "sidebar-plans-vide";
-      vide.textContent = "Aucun plan pour l'instant.";
+      vide.textContent = I18n.t("sidebar_plans.aucun_plan");
       this.liste.appendChild(vide);
       return;
     }
@@ -62,7 +62,7 @@ const SidebarPlans = {
     if (plan.modifie) {
       const date = document.createElement("div");
       date.className = "sidebar-plan-date";
-      date.textContent = new Date(plan.modifie).toLocaleString("fr-FR");
+      date.textContent = new Date(plan.modifie).toLocaleString(I18n.langue === "en" ? "en-US" : "fr-FR");
       item.appendChild(date);
     }
 
@@ -80,11 +80,11 @@ const SidebarPlans = {
 
     const renommer = document.createElement("button");
     renommer.type = "button";
-    renommer.title = "Renommer";
+    renommer.title = I18n.t("commun.renommer");
     renommer.textContent = "✎";
     renommer.addEventListener("click", async (evenement) => {
       evenement.stopPropagation();
-      const nouveauNom = prompt("Nouveau nom du plan :", plan.nom);
+      const nouveauNom = prompt(I18n.t("plans.renommer_prompt"), plan.nom);
       if (!nouveauNom) return;
       const nom = nouveauNom.trim();
       await Plans.renommer(plan, nom);
@@ -95,11 +95,11 @@ const SidebarPlans = {
 
     const supprimer = document.createElement("button");
     supprimer.type = "button";
-    supprimer.title = "Supprimer";
-    supprimer.textContent = "🗑";
+    supprimer.title = I18n.t("commun.supprimer");
+    supprimer.innerHTML = '<img class="icone-supprimer" src="icones/ui/supprimer.svg" alt="">';
     supprimer.addEventListener("click", async (evenement) => {
       evenement.stopPropagation();
-      if (!confirm(`Supprimer définitivement le plan "${plan.nom}" ?`)) return;
+      if (!confirm(I18n.t("plans.supprimer_confirm", { nom: plan.nom }))) return;
       await Plans.supprimer(plan);
       if (plan.id === this.idActuel) {
         // Le plan ouvert vient d'être supprimé : retour à l'écran de choix.
@@ -114,8 +114,8 @@ const SidebarPlans = {
   },
 
   _creerPlan() {
-    const nom = prompt("Nom du nouveau plan :", "Nouveau plan");
+    const nom = prompt(I18n.t("plans.nouveau_nom_prompt"), I18n.t("plans.nouveau_nom_defaut"));
     if (nom === null) return;
-    this.callbackNouveau(nom.trim() || "Nouveau plan");
+    this.callbackNouveau(nom.trim() || I18n.t("plans.nouveau_nom_defaut"));
   }
 };

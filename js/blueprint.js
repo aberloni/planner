@@ -5,12 +5,12 @@ const Blueprint = {
   charger(fichier) {
     return new Promise((resolve, reject) => {
       if (!fichier || !fichier.type.startsWith("image/")) {
-        reject(new Error("Fichier non supporté : merci de choisir une image JPG ou PNG."));
+        reject(new Error(I18n.t("blueprint.fichier_non_supporte")));
         return;
       }
 
       const lecteur = new FileReader();
-      lecteur.onerror = () => reject(new Error("Impossible de lire le fichier."));
+      lecteur.onerror = () => reject(new Error(I18n.t("app.fichier_illisible")));
       lecteur.onload = () => {
         const dataUrl = lecteur.result;
         const image = new Image();
@@ -21,7 +21,7 @@ const Blueprint = {
             hauteurPx: image.naturalHeight
           });
         };
-        image.onerror = () => reject(new Error("Fichier image invalide."));
+        image.onerror = () => reject(new Error(I18n.t("blueprint.image_invalide")));
         image.src = dataUrl;
       };
       lecteur.readAsDataURL(fichier);

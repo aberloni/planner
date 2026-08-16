@@ -1,9 +1,9 @@
-// Point d'entrée : orchestration entre Plan, Viewport et l'UI.
+// Point d'entrée : orchestration entre Blueprint, Viewport et l'UI.
 (function () {
   const zoneTravail = document.getElementById("zone-travail");
   const svg = document.getElementById("viewport");
-  const inputFichier = document.getElementById("input-fichier-plan");
-  const btnImporter = document.getElementById("btn-importer-plan");
+  const inputFichier = document.getElementById("input-fichier-blueprint");
+  const btnImporter = document.getElementById("btn-importer-blueprint");
   const btnEchelle = document.getElementById("btn-echelle");
   const labelEchelle = document.getElementById("label-echelle");
   const btnOrigine = document.getElementById("btn-origine");
@@ -17,13 +17,13 @@
   const statut = document.getElementById("statut");
   const btnAjouterMeuble = document.getElementById("btn-ajouter-meuble");
   const btnMode = document.getElementById("btn-mode");
-  const labelUtilisateurActif = document.getElementById("label-utilisateur-actif");
-  const btnMenuUtilisateur = document.getElementById("btn-menu-utilisateur");
-  const menuUtilisateur = document.getElementById("menu-utilisateur");
-  const menuUtilisateurListe = document.getElementById("menu-utilisateur-liste");
-  const btnAjouterUtilisateur = document.getElementById("btn-ajouter-utilisateur");
-  const btnRenommerUtilisateur = document.getElementById("btn-renommer-utilisateur");
-  const btnSupprimerUtilisateur = document.getElementById("btn-supprimer-utilisateur");
+  const labelPropositionActive = document.getElementById("label-proposition-active");
+  const btnMenuProposition = document.getElementById("btn-menu-proposition");
+  const menuProposition = document.getElementById("menu-proposition");
+  const menuPropositionListe = document.getElementById("menu-proposition-liste");
+  const btnAjouterProposition = document.getElementById("btn-ajouter-proposition");
+  const btnRenommerProposition = document.getElementById("btn-renommer-proposition");
+  const btnSupprimerProposition = document.getElementById("btn-supprimer-proposition");
   const btnOuvrirProjet = document.getElementById("btn-ouvrir-projet");
   const btnExporterProjet = document.getElementById("btn-exporter-projet");
   const inputFichierProjet = document.getElementById("input-fichier-projet");
@@ -37,12 +37,21 @@
   const btnGrille = document.getElementById("btn-grille");
   const btnMesurer = document.getElementById("btn-mesurer");
   const grilleCanvas = document.getElementById("grille-canvas");
-  const btnSessions = document.getElementById("btn-sessions");
-  const labelSessionActuelle = document.getElementById("label-session-actuelle");
-  const sidebarSessionsFond = document.getElementById("sidebar-sessions-fond");
-  const sidebarSessionsFermer = document.getElementById("sidebar-sessions-fermer");
-  const sidebarSessionsListe = document.getElementById("sidebar-sessions-liste");
-  const sidebarSessionsNouvelle = document.getElementById("sidebar-sessions-nouvelle");
+  const btnChangerPlan = document.getElementById("btn-changer-plan");
+  const labelPlanActuel = document.getElementById("label-plan-actuel");
+  const sidebarPlansFond = document.getElementById("sidebar-plans-fond");
+  const sidebarPlansFermer = document.getElementById("sidebar-plans-fermer");
+  const sidebarPlansListe = document.getElementById("sidebar-plans-liste");
+  const sidebarPlansNouveau = document.getElementById("sidebar-plans-nouveau");
+  const btnLangue = document.getElementById("btn-langue");
+
+  const btnLangueIcone = document.getElementById("btn-langue-icone");
+  const DRAPEAUX_LANGUE = { fr: "icones/ui/drapeau-fr.svg", en: "icones/ui/drapeau-en.svg" };
+  btnLangueIcone.src = DRAPEAUX_LANGUE[I18n.langue];
+  btnLangue.addEventListener("click", () => {
+    I18n.basculer();
+    btnLangueIcone.src = DRAPEAUX_LANGUE[I18n.langue];
+  });
 
   document.getElementById("filigrane-version").textContent = `v${VERSION}`;
 
@@ -84,20 +93,23 @@
     liste: document.getElementById("catalogue-liste"),
     boutonNouveau: document.getElementById("btn-nouveau-modele")
   });
-  Catalogue.alChangement(() => sauvegarderProjet());
+  // Le catalogue est GLOBAL (partagé par tous les plans, voir
+  // js/catalogue-stockage.js), donc sauvegardé à part, jamais dans le
+  // Projet du plan courant.
+  Catalogue.alChangement(() => sauvegarderCatalogue());
   EditionCatalogue.init({
     overlay: document.getElementById("vue-catalogue"),
     tbody: document.getElementById("vue-catalogue-tbody"),
     fermer: document.getElementById("vue-catalogue-fermer"),
     nouveau: document.getElementById("vue-catalogue-nouveau")
   });
-  Utilisateurs.init({
-    label: labelUtilisateurActif,
-    listeConteneur: menuUtilisateurListe,
-    fermerMenu: () => menuUtilisateur.classList.remove("visible")
+  Propositions.init({
+    label: labelPropositionActive,
+    listeConteneur: menuPropositionListe,
+    fermerMenu: () => menuProposition.classList.remove("visible")
   });
-  Utilisateurs.alChangement(() => sauvegarderProjet());
-  Utilisateurs.alChangement(() => Catalogue.masquer());
+  Propositions.alChangement(() => sauvegarderProjet());
+  Propositions.alChangement(() => Catalogue.masquer());
   Viewport.alChangement(() => Regles.redessiner());
   Viewport.alChangement(() => Grille.redessiner());
   Viewport.alChangement(() => {
@@ -114,16 +126,16 @@
     if (!enEdition) Meubles.deselectionner();
     if (enEdition) Habillage.deselectionner();
     Catalogue.masquer();
-    btnAjouterMeuble.title = enEdition ? "Choisir/ajouter un meuble" : "Ajouter un masque";
+    btnAjouterMeuble.title = enEdition ? I18n.t("app.ajouter_meuble_title_edition") : I18n.t("app.ajouter_meuble_title_clean");
   }
 
   Mode.init(btnMode);
   Mode.alChangement(appliquerMode);
   appliquerMode(Mode.actuel); // synchronise l'état initial (pas d'événement au chargement)
 
-  let planCourant = null; // { dataUrl, largeurPx, hauteurPx }
+  let blueprintActuel = null; // { dataUrl, largeurPx, hauteurPx }
   let projetId = null; // identifiant unique du projet courant, nom de fichier par défaut à l'export
-  let sessionActuelle = null; // session en cours (voir js/sessions.js) : { id, nom } en mode local, { fichier, nom } en mode fichiers, null avant tout choix
+  let planActuel = null; // plan en cours (voir js/plans.js) : { id, nom } en mode local, { fichier, nom } en mode fichiers, null avant tout choix
 
   function mettreAJourBoutonEchelle() {
     labelEchelle.textContent = Echelle.pxParCm ? `${Math.round(Echelle.pxParCm * 100)}px/m` : "";
@@ -131,8 +143,9 @@
 
   Echelle.alDefinie(mettreAJourBoutonEchelle);
 
-  // Coordonnées affichées en cm depuis le coin du fond (mêmes unités que les
-  // règles/la grille) — dépend donc aussi de l'échelle, pas seulement de l'origine.
+  // Coordonnées affichées en cm depuis le coin du blueprint (mêmes unités
+  // que les règles/la grille) — dépend donc aussi de l'échelle, pas
+  // seulement de l'origine.
   function mettreAJourBoutonOrigine() {
     if (!Origine.definie || !Echelle.pxParCm) {
       labelOrigine.textContent = "";
@@ -146,110 +159,73 @@
   Origine.alDefinie(mettreAJourBoutonOrigine);
   Echelle.alDefinie(mettreAJourBoutonOrigine);
 
-  // Construit l'état complet du projet (plan + habillage + utilisateurs, chacun
-  // avec ses propres meubles) pour sauvegarde/export.
+  // Construit l'état complet du projet (blueprint + habillage + propositions,
+  // chacune avec ses propres meubles) pour sauvegarde/export.
   function construireProjet() {
-    Utilisateurs.synchroniser(); // recopie Meubles.liste dans l'utilisateur actif
+    Propositions.synchroniser(); // recopie Meubles.liste dans la proposition active
     return {
       version: 1,
       id: projetId,
-      nom: sessionActuelle ? sessionActuelle.nom : null,
+      nom: planActuel ? planActuel.nom : null,
       plan: {
-        image: planCourant.dataUrl,
-        largeurPx: planCourant.largeurPx,
-        hauteurPx: planCourant.hauteurPx,
+        image: blueprintActuel.dataUrl,
+        largeurPx: blueprintActuel.largeurPx,
+        hauteurPx: blueprintActuel.hauteurPx,
         echellePxParCm: Echelle.pxParCm,
         origineX: Origine.definie ? Origine.decalageX : null,
         origineY: Origine.definie ? Origine.decalageY : null
       },
       habillage: Habillage.liste,
-      catalogue: Catalogue.liste,
-      catalogueId: Catalogue.id,
       cadreExport: CadreExport.cadre,
-      utilisateurs: Utilisateurs.liste
+      propositions: Propositions.liste
     };
   }
 
   // Sauvegarde toujours dans le filet de sécurité localStorage (marche
-  // partout, y compris file://) et, si une session est active (voir
-  // js/sessions.js), dans la session elle-même — localStorage en mode
-  // local, sessions/*.json (via PHP) en mode fichiers.
+  // partout, y compris file://) et, si un plan est actif (voir
+  // js/plans.js), dans le plan lui-même — localStorage en mode local,
+  // plans/*.json (via PHP) en mode fichiers. Le catalogue N'EST PAS inclus
+  // ici : il est global (partagé par tous les plans), sauvegardé à part
+  // par sauvegarderCatalogue() — voir js/catalogue-stockage.js.
   function sauvegarderProjet() {
-    if (!planCourant) return;
+    if (!blueprintActuel) return;
     const projet = construireProjet();
     Stockage.sauvegarder(projet);
-    if (sessionActuelle) {
-      Sessions.sauvegarder(sessionActuelle, projet);
-      Sessions.memoriserDerniere(sessionActuelle);
+    if (planActuel) {
+      Plans.sauvegarder(planActuel, projet);
+      Plans.memoriserDernier(planActuel);
     }
+  }
+
+  function sauvegarderCatalogue() {
+    CatalogueStockage.sauvegarder(Catalogue.id, Catalogue.liste);
   }
 
   Echelle.alDefinie(sauvegarderProjet);
   Origine.alDefinie(sauvegarderProjet);
 
-  // Capture le cadrage actuel (position de l'origine à l'écran + niveau de
-  // zoom en cm réels affichés) avant de quitter une session, pour le
-  // reproduire sur la session suivante (voir appliquerCadrage) — utile
-  // quand les sessions sont les étages d'un même lieu : on ne se retrouve
-  // pas perdu à chaque changement de vue. `null` si aucun plan encore
-  // affiché (premier chargement).
-  function capturerCadrage() {
-    if (!planCourant) return null;
-    const vb = Viewport.viewBox;
-    const pxParCm = Echelle.pxParCm || Echelle.PX_PAR_CM_DEFAUT;
-    const origineX = Origine.definie ? Origine.decalageX : 0;
-    const origineY = Origine.definie ? Origine.decalageY : 0;
-    return {
-      largeurCm: vb.largeur / pxParCm,
-      hauteurCm: vb.hauteur / pxParCm,
-      // Position de l'origine dans le viewBox, en fraction (0-1) de sa
-      // largeur/hauteur — indépendante de la résolution du plan, donc
-      // reproductible même si le nouveau plan a une échelle différente.
-      ratioX: (origineX - vb.x) / vb.largeur,
-      ratioY: (origineY - vb.y) / vb.hauteur
-    };
-  }
-
-  // Reproduit un cadrage capturé par capturerCadrage() sur le plan qui vient
-  // d'être chargé (Echelle/Origine déjà à jour à ce stade) : mêmes cm réels
-  // affichés, origine au même endroit de l'écran.
-  function appliquerCadrage(cadrage) {
-    if (!cadrage) return;
-    const pxParCm = Echelle.pxParCm || Echelle.PX_PAR_CM_DEFAUT;
-    const largeur = cadrage.largeurCm * pxParCm;
-    const hauteur = cadrage.hauteurCm * pxParCm;
-    const origineX = Origine.definie ? Origine.decalageX : 0;
-    const origineY = Origine.definie ? Origine.decalageY : 0;
-    Viewport.definirViewBox({
-      x: origineX - cadrage.ratioX * largeur,
-      y: origineY - cadrage.ratioY * hauteur,
-      largeur,
-      hauteur
-    });
-  }
-
-  // Applique un projet complet (restauration locale, import de fichier) : plan,
-  // échelle et meubles. Remplace tout ce qui était affiché. `cadragePrecedent`
-  // (voir capturerCadrage) reproduit le cadrage de la session qu'on quitte ;
-  // à défaut (premier chargement), vue d'ensemble sur le cadre d'export via
-  // le même algo que le bouton "Cadrer" (Viewport.cadrerSurRectangle),
-  // plutôt que le recentrage 100% posé par Viewport.definirPlan.
-  function appliquerProjet(projet, messageStatut, cadragePrecedent) {
+  // Applique un projet complet (restauration locale, import de fichier) :
+  // blueprint, échelle et meubles. Remplace tout ce qui était affiché.
+  // Vue d'ensemble systématique sur le cadre d'export via le même algo que
+  // le bouton "Cadrer" (Viewport.cadrerSurRectangle) à chaque changement de
+  // plan, plutôt que de tenter de reproduire le cadrage du plan précédent.
+  function appliquerProjet(projet, messageStatut) {
     if (!projet || !projet.plan) return;
 
     const { image, largeurPx, hauteurPx, echellePxParCm, origineX, origineY } = projet.plan;
-    planCourant = { dataUrl: image, largeurPx, hauteurPx };
+    blueprintActuel = { dataUrl: image, largeurPx, hauteurPx };
     projetId = projet.id || crypto.randomUUID(); // reprend l'id existant, ou en génère un (anciens fichiers)
     Echelle.pxParCm = echellePxParCm || Echelle.PX_PAR_CM_DEFAUT;
     Origine.charger(origineX, origineY);
     Viewport.definirPlan(image, largeurPx, hauteurPx);
-    zoneTravail.classList.add("plan-charge");
+    zoneTravail.classList.add("blueprint-charge");
     Habillage.charger(projet.habillage || []);
-    Catalogue.charger(projet.catalogue || [], projet.catalogueId);
-    Utilisateurs.charger(projet.utilisateurs || []); // recharge aussi Meubles (utilisateur actif)
+    // Le catalogue est global (voir js/catalogue-stockage.js), pas rechargé
+    // ici. Un éventuel catalogue embarqué (ancien format, incompatible) est
+    // ignoré — pas de migration, voir documentation/17-catalogue.md.
+    Propositions.charger(projet.propositions || []); // recharge aussi Meubles (proposition active)
     CadreExport.definir(projet.cadreExport);
-    if (cadragePrecedent) appliquerCadrage(cadragePrecedent);
-    else Viewport.cadrerSurRectangle(CadreExport.cadre);
+    Viewport.cadrerSurRectangle(CadreExport.cadre);
     Regles.redessiner();
     Grille.redessiner();
     mettreAJourBoutonEchelle();
@@ -258,124 +234,215 @@
     sauvegarderProjet();
   }
 
-  async function chargerFichierPlan(fichier) {
+  async function chargerFichierBlueprint(fichier) {
     try {
-      const { dataUrl, largeurPx, hauteurPx } = await Plan.charger(fichier);
+      const { dataUrl, largeurPx, hauteurPx } = await Blueprint.charger(fichier);
 
-      // Un plan était déjà chargé : on ne fait que remplacer l'image de fond,
-      // sans toucher à l'échelle, aux meubles/habillage, au catalogue, aux
-      // utilisateurs ni au cadre d'export — l'utilisateur n'a pas à tout
+      // Un blueprint était déjà chargé : on ne fait que remplacer l'image de
+      // fond, sans toucher à l'échelle, aux meubles/habillage, au catalogue,
+      // aux propositions ni au cadre d'export — l'utilisateur n'a pas à tout
       // recaler après un simple changement d'image de fond.
-      if (planCourant) {
-        planCourant = { dataUrl, largeurPx, hauteurPx };
+      if (blueprintActuel) {
+        blueprintActuel = { dataUrl, largeurPx, hauteurPx };
         Viewport.definirPlan(dataUrl, largeurPx, hauteurPx);
         Regles.redessiner();
         Grille.redessiner();
         sauvegarderProjet();
-        Statut.definir("Plan remplacé (échelle, origine, meubles et habillage conservés).");
+        Statut.definir(I18n.t("app.blueprint_remplace"));
         return;
       }
 
-      planCourant = { dataUrl, largeurPx, hauteurPx };
-      // Nouveau projet = nouvel identifiant, sauf s'il s'agit du premier plan
-      // importé dans une session locale déjà créée (reprend son id).
-      projetId = (sessionActuelle && Sessions.mode === Sessions.MODE_LOCAL) ? sessionActuelle.id : crypto.randomUUID();
+      blueprintActuel = { dataUrl, largeurPx, hauteurPx };
+      // Nouveau projet = nouvel identifiant, sauf s'il s'agit du premier
+      // blueprint importé dans un plan local déjà créé (reprend son id).
+      projetId = (planActuel && Plans.mode === Plans.MODE_LOCAL) ? planActuel.id : crypto.randomUUID();
       Echelle.pxParCm = Echelle.PX_PAR_CM_DEFAUT;
       Origine.reinitialiser();
       Habillage.charger([]);
-      Catalogue.charger([]);
-      Utilisateurs.charger([]); // recrée un utilisateur unique par défaut (et vide Meubles)
+      // Catalogue non touché : global, partagé par tous les plans (voir
+      // js/catalogue-stockage.js), pas remis à zéro pour un nouveau plan.
+      Propositions.charger([]); // recrée une proposition unique par défaut (et vide Meubles)
       Viewport.definirPlan(dataUrl, largeurPx, hauteurPx);
-      zoneTravail.classList.add("plan-charge");
-      CadreExport.reinitialiser(); // cadre = tout le nouveau plan
+      zoneTravail.classList.add("blueprint-charge");
+      CadreExport.reinitialiser(); // cadre = tout le nouveau blueprint
       Regles.redessiner();
       Grille.redessiner();
       mettreAJourBoutonEchelle();
       mettreAJourBoutonOrigine();
       sauvegarderProjet();
-      Statut.definir("Plan importé avec une échelle par défaut (100px = 1m). Utilisez le bouton \"Échelle\" pour l'ajuster.");
+      Statut.definir(I18n.t("app.blueprint_importe"));
     } catch (erreur) {
       alert(erreur.message);
     }
   }
 
-  // Au démarrage : rouvre directement la dernière session utilisée si elle
-  // existe encore (voir Sessions.memoriserDerniere/derniereSessionId), sinon
-  // affiche l'écran de choix (voir js/sessions.js, js/selecteur-sessions.js
-  // et documentation/20-sessions.md).
-  async function demarrerSelectionSession() {
-    Sessions.init();
-    const liste = await Sessions.lister();
-    const derniereId = Sessions.derniereSessionId();
-    const derniere = derniereId ? liste.find((s) => s.id === derniereId) : null;
-    if (derniere) {
-      ouvrirSession(derniere);
-      return;
-    }
-    SelecteurSessions.afficher(liste, (session) => ouvrirSession(session));
+  // Charge le catalogue global (partagé par tous les plans) une seule fois
+  // au démarrage — voir js/catalogue-stockage.js. Pas de migration depuis
+  // les anciens catalogues embarqués par plan : rien de sauvegardé encore
+  // = catalogue vide, on repart de zéro.
+  async function chargerCatalogueGlobal() {
+    CatalogueStockage.init();
+    const donnees = await CatalogueStockage.charger();
+    Catalogue.charger(donnees ? donnees.catalogue : [], donnees ? donnees.id : null);
   }
 
-  async function ouvrirSession(session) {
-    SelecteurSessions.masquer();
+  // Au démarrage : rouvre directement le dernier plan utilisé s'il existe
+  // encore (voir Plans.memoriserDernier/dernierPlanId), sinon affiche
+  // l'écran de choix (voir js/plans.js, js/selecteur-plans.js et
+  // documentation/20-plans.md).
+  async function demarrerSelectionPlan() {
+    Plans.init();
+    await chargerCatalogueGlobal();
+    const liste = await Plans.lister();
+    const dernierId = Plans.dernierPlanId();
+    const dernier = dernierId ? liste.find((p) => p.id === dernierId) : null;
+    if (dernier) {
+      ouvrirPlan(dernier);
+      return;
+    }
+    SelecteurPlans.afficher(liste, (plan) => ouvrirPlan(plan));
+  }
 
-    if (session.nouvelle) {
+  // Verrou : bloque toute nouvelle ouverture de plan tant qu'une précédente
+  // n'est pas terminée (ex. double-clic ou clic sur un autre plan pendant le
+  // chargement) — sans ça, deux chargements pouvaient se chevaucher et le
+  // plus lent à répondre (souvent en MODE_FICHIERS, latence réseau
+  // variable) écrasait l'affichage en dernier, même s'il correspondait à un
+  // clic plus ancien, donnant parfois un blueprint qui ne correspond pas au
+  // plan affiché dans la barre d'outils.
+  let chargementPlanEnCours = false;
+
+  async function ouvrirPlan(plan) {
+    if (chargementPlanEnCours) return;
+    SelecteurPlans.masquer();
+    // #zone-travail passe de display:none à visible ici : les canvas
+    // (règles/grille) avaient une taille nulle tant qu'ils étaient cachés,
+    // il faut les re-mesurer maintenant (pas seulement au resize fenêtre).
+    Regles.redimensionner();
+    Grille.redimensionner();
+
+    if (plan.nouveau) {
       // Le fichier/id cible est désigné dès maintenant côté client (voir
-      // js/sessions.js) : la session n'existe vraiment côté stockage qu'à
-      // la première sauvegarde (après import d'un plan).
-      sessionActuelle = Sessions.mode === Sessions.MODE_LOCAL
-        ? { id: Sessions.creer(session.nom), nom: session.nom }
-        : { fichier: `${crypto.randomUUID()}.json`, nom: session.nom };
-      labelSessionActuelle.textContent = sessionActuelle.nom;
-      Statut.definir("Nouvelle session : importez un plan pour commencer.");
+      // js/plans.js) : le plan n'existe vraiment côté stockage qu'à la
+      // première sauvegarde (après import d'un blueprint).
+      planActuel = Plans.mode === Plans.MODE_LOCAL
+        ? { id: Plans.creer(plan.nom), nom: plan.nom }
+        : { fichier: `${crypto.randomUUID()}.json`, nom: plan.nom };
+      labelPlanActuel.textContent = planActuel.nom;
+      Statut.definir(I18n.t("app.plan_nouveau_statut"));
+      inputFichier.click(); // ouvre tout de suite le sélecteur d'image, sinon l'écran vide ("Aucun blueprint importé") passe pour un plantage
       return;
     }
 
-    const cadragePrecedent = capturerCadrage();
-    const projet = await Sessions.charger(session);
-    if (!projet) {
-      alert("Impossible de charger cette session.");
-      Sessions.oublierDerniere();
-      location.reload();
-      return;
+    chargementPlanEnCours = true;
+    sidebarPlansListe.classList.add("chargement");
+    try {
+      const projet = await Plans.charger(plan);
+
+      if (!projet) {
+        alert(I18n.t("app.plan_impossible_charger"));
+        Plans.oublierDernier();
+        location.reload();
+        return;
+      }
+      planActuel = plan;
+      labelPlanActuel.textContent = planActuel.nom;
+      appliquerProjet(projet, I18n.t("app.plan_ouvert", { nom: plan.nom }));
+    } finally {
+      chargementPlanEnCours = false;
+      sidebarPlansListe.classList.remove("chargement");
     }
-    sessionActuelle = session;
-    labelSessionActuelle.textContent = sessionActuelle.nom;
-    appliquerProjet(projet, `Session ouverte : ${session.nom}.`, cadragePrecedent);
   }
 
-  function exporterProjet() {
-    if (!planCourant) {
-      alert("Importez d'abord un plan avant d'enregistrer un projet.");
+  // Exporte TOUS les plans en un seul fichier (pas seulement le plan
+  // courant) : le catalogue étant global (voir js/catalogue-stockage.js),
+  // ça reste la seule façon d'obtenir une sauvegarde complète et portable
+  // de tout ce qui est stocké — voir importerFichierProjet pour la lecture.
+  async function exporterProjet() {
+    if (!blueprintActuel) {
+      alert(I18n.t("app.importer_blueprint_avant_projet"));
       return;
     }
-    const nomParDefaut = `session_${projetId}`;
-    const nom = prompt("Nom du projet (pour le fichier) :", nomParDefaut) || nomParDefaut;
-    const blob = new Blob([JSON.stringify(construireProjet(), null, 2)], { type: "application/json" });
+    const liste = await Plans.lister();
+    const plans = [];
+    for (const plan of liste) {
+      const estActif = (plan.id && planActuel && plan.id === planActuel.id)
+        || (plan.fichier && planActuel && plan.fichier === planActuel.fichier);
+      // Le plan actuellement ouvert peut avoir des changements pas encore
+      // resauvegardés côté stockage (rare, mais évite une course) : on
+      // reprend l'état en mémoire plutôt que de le relire.
+      const projet = estActif ? construireProjet() : await Plans.charger(plan);
+      if (projet) plans.push(projet);
+    }
+
+    const nomParDefaut = `plans_${new Date().toISOString().slice(0, 10)}`;
+    const nom = prompt(I18n.t("app.nom_fichier_plans_prompt", { n: plans.length }), nomParDefaut) || nomParDefaut;
+    const paquet = { version: 1, catalogue: Catalogue.liste, catalogueId: Catalogue.id, plans };
+    const blob = new Blob([JSON.stringify(paquet, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const lien = document.createElement("a");
     lien.href = url;
     lien.download = `${nom}.json`;
     lien.click();
     URL.revokeObjectURL(url);
-    Statut.definir(`Projet exporté : ${nom}.json.`);
+    Statut.definir(I18n.t("app.plans_exportes", { n: plans.length, nom }));
+  }
+
+  // Persiste un plan importé (nouvelle entrée) sans l'ouvrir, pour
+  // importerPaquetPlans() — même principe que la branche "nouveau plan" de
+  // ouvrirPlan (fichier/id désigné côté client), mais projet déjà connu.
+  async function importerPlanSansOuvrir(projet, nomParDefaut) {
+    const nom = projet.nom || nomParDefaut;
+    const cible = Plans.mode === Plans.MODE_LOCAL
+      ? { id: Plans.creer(nom), nom }
+      : { fichier: `${crypto.randomUUID()}.json`, nom };
+    projet.id = cible.id || projet.id;
+    projet.nom = nom;
+    await Plans.sauvegarder(cible, projet);
+    return cible;
+  }
+
+  // Importe le paquet multi-plans produit par exporterProjet() : absorbe le
+  // catalogue embarqué dans le catalogue global, persiste chaque plan comme
+  // une nouvelle entrée (jamais d'écrasement d'un plan existant), puis
+  // ouvre le premier.
+  async function importerPaquetPlans(paquet) {
+    if (Array.isArray(paquet.catalogue) && paquet.catalogue.length) {
+      const ajoutes = Catalogue.fusionner(paquet.catalogue);
+      if (ajoutes) sauvegarderCatalogue();
+    }
+
+    let premier = null;
+    for (let i = 0; i < paquet.plans.length; i++) {
+      const projet = paquet.plans[i];
+      const cible = await importerPlanSansOuvrir(projet, I18n.t("app.plan_importe_defaut", { n: i + 1 }));
+      if (i === 0) premier = { ...cible, nom: projet.nom };
+    }
+
+    Statut.definir(I18n.t("app.plans_importes", { n: paquet.plans.length }));
+    if (premier) ouvrirPlan(premier);
   }
 
   function importerFichierProjet(fichier) {
     const lecteur = new FileReader();
-    lecteur.onerror = () => alert("Impossible de lire le fichier.");
+    lecteur.onerror = () => alert(I18n.t("app.fichier_illisible"));
     lecteur.onload = () => {
       try {
         const projet = JSON.parse(lecteur.result);
-        appliquerProjet(projet, "Projet ouvert depuis un fichier.");
+        if (Array.isArray(projet.plans)) {
+          importerPaquetPlans(projet);
+          return;
+        }
+        appliquerProjet(projet, I18n.t("app.projet_ouvert_fichier"));
       } catch (erreur) {
-        alert("Fichier de projet invalide.");
+        alert(I18n.t("app.fichier_projet_invalide"));
       }
     };
     lecteur.readAsText(fichier);
   }
 
   // Export/import du catalogue seul, dans un fichier séparé du projet (CSV,
-  // pour rester facilement éditable dans un tableur — la session/le projet
+  // pour rester facilement éditable dans un tableur — le plan/le projet
   // reste en JSON, voir exporterProjet/importerFichierProjet) — pour
   // réutiliser une même liste d'objets sur plusieurs plans/projets sans
   // passer par "Ouvrir un projet...".
@@ -384,7 +451,7 @@
   // modeleId y fait référence) : à ne pas modifier à la main sur une ligne
   // existante, sous peine de délier les instances déjà posées de ce prefab.
   // La laisser vide sur une nouvelle ligne en génère un neuf à l'import.
-  const CSV_ENTETES = ["id", "nom", "type", "largeur_cm", "profondeur_cm", "hauteur_cm", "a_demenager"];
+  const CSV_ENTETES = ["id", "nom", "description", "type", "largeur_cm", "profondeur_cm", "hauteur_cm", "a_demenager"];
 
   function csvEchapperChamp(valeur) {
     const texte = String(valeur ?? "");
@@ -436,18 +503,20 @@
 
   function exporterCatalogue() {
     if (Catalogue.liste.length === 0) {
-      alert("Le catalogue est vide, rien à exporter.");
+      alert(I18n.t("app.catalogue_vide_exporter"));
       return;
     }
     const nomParDefaut = `catalog_${Catalogue.id}`;
-    const nom = prompt("Nom du fichier catalogue :", nomParDefaut) || nomParDefaut;
-    const pxParCm = Echelle.pxParCm || Echelle.PX_PAR_CM_DEFAUT;
+    const nom = prompt(I18n.t("app.catalogue_nom_fichier_prompt"), nomParDefaut) || nomParDefaut;
+    // modele.largeur/hauteur sont déjà en cm (donnée brute, voir js/catalogue.js) :
+    // aucune conversion d'échelle nécessaire à l'export.
     const lignes = [CSV_ENTETES, ...Catalogue.liste.map((modele) => [
       modele.id,
       modele.nom,
+      modele.description || "",
       PlannerConf.trouverType(modele.type).libelle,
-      Math.round(modele.largeur / pxParCm),
-      Math.round(modele.hauteur / pxParCm),
+      Math.round(modele.largeur),
+      Math.round(modele.hauteur),
       modele.hauteurCm ?? "",
       modele.aDemenager !== false ? "oui" : "non"
     ])];
@@ -460,19 +529,14 @@
     lien.download = `${nom}.csv`;
     lien.click();
     URL.revokeObjectURL(url);
-    Statut.definir(`Catalogue exporté : ${nom}.csv.`);
+    Statut.definir(I18n.t("app.catalogue_exporte", { nom }));
   }
 
   function importerFichierCatalogue(fichier) {
-    if (!planCourant) {
-      alert("Importez d'abord un plan avant d'importer un catalogue.");
-      return;
-    }
     const lecteur = new FileReader();
-    lecteur.onerror = () => alert("Impossible de lire le fichier.");
+    lecteur.onerror = () => alert(I18n.t("app.fichier_illisible"));
     lecteur.onload = () => {
       try {
-        const pxParCm = Echelle.pxParCm || Echelle.PX_PAR_CM_DEFAUT;
         const lignes = csvParser(lecteur.result);
         if (lignes.length === 0) throw new Error("fichier vide");
 
@@ -480,6 +544,7 @@
         const colonne = (nom) => entetes.indexOf(nom);
         const iId = colonne("id");
         const iNom = colonne("nom");
+        const iDescription = colonne("description");
         const iType = colonne("type");
         const iLargeur = colonne("largeur_cm");
         const iProfondeur = colonne("profondeur_cm");
@@ -498,20 +563,21 @@
             return {
               id: idExistant || crypto.randomUUID(),
               nom: (champs[iNom] || "").trim() || "Sans nom",
+              description: iDescription > -1 ? (champs[iDescription] || "").trim() : "",
               type: (type || PlannerConf.trouverType(null)).id,
-              largeur: (parseFloat(champs[iLargeur]) || 100) * pxParCm,
-              hauteur: (parseFloat(champs[iProfondeur]) || 100) * pxParCm,
+              largeur: parseFloat(champs[iLargeur]) || 100,
+              hauteur: parseFloat(champs[iProfondeur]) || 100,
               hauteurCm: iHauteur > -1 && champs[iHauteur].trim() !== "" ? parseFloat(champs[iHauteur]) : null,
               aDemenager: iADemenager > -1 ? !/^(non|false|0)$/i.test(champs[iADemenager].trim()) : true
             };
           });
 
         Catalogue.charger(modeles, Catalogue.id);
-        sauvegarderProjet();
-        const avertissement = typesInconnus ? ` (${typesInconnus} type(s) non reconnu(s), repli sur générique)` : "";
-        Statut.definir(`Catalogue remplacé : ${modeles.length} objet(s)${avertissement}.`);
+        sauvegarderCatalogue();
+        const avertissement = typesInconnus ? I18n.t("app.catalogue_avertissement_types", { n: typesInconnus }) : "";
+        Statut.definir(I18n.t("app.catalogue_remplace", { n: modeles.length, avertissement }));
       } catch (erreur) {
-        alert("Fichier catalogue invalide (CSV attendu, colonnes : " + CSV_ENTETES.join(", ") + ").");
+        alert(I18n.t("app.catalogue_fichier_invalide", { colonnes: CSV_ENTETES.join(", ") }));
       }
     };
     lecteur.readAsText(fichier);
@@ -522,7 +588,7 @@
   // seul visible en @media print) puis déclenche window.print().
   function imprimerCatalogue() {
     if (Catalogue.liste.length === 0) {
-      alert("Le catalogue est vide, rien à imprimer.");
+      alert(I18n.t("app.catalogue_vide_imprimer"));
       return;
     }
     const pxParCm = Echelle.pxParCm || Echelle.PX_PAR_CM_DEFAUT;
@@ -533,7 +599,7 @@
     let volumeTotalM3 = 0;
     const lignes = EditionCatalogue._listeTrieeParType().map((modele) => {
       // Comme la vue d'édition du catalogue : si une instance est posée sur
-      // le plan de l'utilisateur actif, on imprime ses valeurs actuelles
+      // le plan de la proposition active, on imprime ses valeurs actuelles
       // plutôt que la copie (potentiellement figée) du modèle.
       // Dupliquer un meuble garde le même modeleId (voir objets.js,
       // dupliquer()) : plusieurs instances peuvent partager un modèle,
@@ -543,46 +609,53 @@
       const quantite = instances.length;
       const nom = modele.nom; // nom du prefab — distinct du nom (auto-incrémenté) de chaque instance
       const typeId = instance ? instance.type : modele.type;
-      const largeurPx = instance ? instance.largeur : modele.largeur;
-      const profondeurPx = instance ? instance.hauteur : modele.hauteur;
+      // modele.largeur/hauteur sont déjà en cm ; une instance posée est en
+      // px (convertie selon l'échelle du plan actif) — voir js/catalogue.js.
+      const largeurCmBrute = instance ? instance.largeur / pxParCm : modele.largeur;
+      const profondeurCmBrute = instance ? instance.hauteur / pxParCm : modele.hauteur;
       const hauteurCm = instance ? instance.hauteurCm : modele.hauteurCm;
       const aDemenager = instance ? instance.aDemenager !== false : modele.aDemenager !== false;
-      const largeurCm = Math.round(largeurPx / pxParCm);
-      const profondeurCm = Math.round(profondeurPx / pxParCm);
+      const largeurCm = Math.round(largeurCmBrute);
+      const profondeurCm = Math.round(profondeurCmBrute);
       const hauteurReelleCm = hauteurCm ?? "-";
-      let volumeTexte = "-";
-      if (typeof hauteurCm === "number" && aDemenager) {
+      // Comme la vue catalogue : rien tant qu'aucune instance n'est posée
+      // (quantite = 0), pas de "0.00 m³" trompeur.
+      let volumeTexte = quantite === 0 ? "" : "-";
+      if (quantite > 0 && typeof hauteurCm === "number" && aDemenager) {
         const volumeM3 = (largeurCm * profondeurCm * hauteurCm * quantite) / 1e6;
         volumeTotalM3 += volumeM3;
         volumeTexte = `${volumeM3.toFixed(2)} m³`;
       }
+      const descriptionHtml = modele.description
+        ? `<div class="impression-catalogue-description">${echapper(modele.description)}</div>`
+        : "";
       return `<tr>
-        <td>${PlannerConf.iconeHtml(typeId, "impression-catalogue-icone")} ${echapper(nom)}</td>
+        <td>${PlannerConf.iconeHtml(typeId, "impression-catalogue-icone")} ${echapper(nom)}${descriptionHtml}</td>
         <td>${largeurCm} × ${profondeurCm} × ${hauteurReelleCm} cm</td>
         <td>${quantite}</td>
-        <td>${aDemenager ? "Oui" : "Non"}</td>
+        <td>${aDemenager ? I18n.t("commun.oui") : I18n.t("commun.non")}</td>
         <td>${volumeTexte}</td>
       </tr>`;
     }).join("");
 
     impressionCatalogue.innerHTML = `
-      <h1>Catalogue — ${echapper(Catalogue.id || "")}</h1>
-      <p>${Catalogue.liste.length} objet(s)</p>
+      <h1>${I18n.t("app.impression_titre", { id: echapper(Catalogue.id || "") })}</h1>
+      <p>${I18n.t("app.impression_objets", { n: Catalogue.liste.length })}</p>
       <table>
-        <thead><tr><th>Nom</th><th>L × P × H</th><th>Qté</th><th>À déménager</th><th>Volume</th></tr></thead>
+        <thead><tr><th>${I18n.t("catalogue_vue.th_nom")}</th><th>${I18n.t("app.impression_th_lph")}</th><th>${I18n.t("catalogue_vue.th_qte")}</th><th>${I18n.t("catalogue_vue.th_a_demenager")}</th><th>${I18n.t("catalogue_vue.th_volume")}</th></tr></thead>
         <tbody>${lignes}</tbody>
-        <tfoot><tr><td colspan="4"><strong>Total</strong></td><td><strong>${volumeTotalM3.toFixed(2)} m³</strong></td></tr></tfoot>
+        <tfoot><tr><td colspan="4"><strong>${I18n.t("commun.total")}</strong></td><td><strong>${volumeTotalM3.toFixed(2)} m³</strong></td></tr></tfoot>
       </table>
     `;
     window.print();
   }
 
-  // Exporte en PNG le contenu du plan (fond + habillage + meubles de
-  // l'utilisateur actif) recadré sur CadreExport.cadre : clone le SVG,
+  // Exporte en PNG le contenu du plan (blueprint + habillage + meubles de la
+  // proposition active) recadré sur CadreExport.cadre : clone le SVG,
   // retire tout ce qui est pur outillage d'édition (poignées, sélection,
   // le cadre lui-même), fixe son viewBox/dimensions sur le cadre, puis le
-  // fait passer par une <image> + <canvas> pour obtenir un PNG (le fond du
-  // plan est déjà en data URL, donc pas de souci de canvas "taintée").
+  // fait passer par une <image> + <canvas> pour obtenir un PNG (le
+  // blueprint est déjà en data URL, donc pas de souci de canvas "taintée").
   //
   // FACTEUR_RESOLUTION_PNG : le viewBox reste en unités du plan (1 unité ≈
   // 1px de l'image importée), mais width/height du SVG (donc du canvas de
@@ -601,8 +674,8 @@
   }
 
   function exporterPNG() {
-    if (!planCourant) {
-      alert("Importez d'abord un plan avant d'exporter une image.");
+    if (!blueprintActuel) {
+      alert(I18n.t("app.importer_blueprint_avant_export"));
       return;
     }
 
@@ -644,9 +717,9 @@
       lien.href = canvas.toDataURL("image/png");
       lien.download = `${nom}.png`;
       lien.click();
-      Statut.definir(`Image exportée : ${nom}.png (${largeurPx}×${hauteurPx}px).`);
+      Statut.definir(I18n.t("app.image_exportee", { nom, larg: largeurPx, haut: hauteurPx }));
     };
-    image.onerror = () => alert("Échec de l'export PNG.");
+    image.onerror = () => alert(I18n.t("app.export_png_echec"));
     image.src = svgDataUrl;
   }
 
@@ -662,8 +735,8 @@
     const { actif, subdivisions } = Grille.basculer();
     btnGrille.classList.toggle("actif", actif);
     btnGrille.title = actif
-      ? `Grille : ${subdivisions} cellules par unité de mesure (cliquer pour changer)`
-      : "Afficher la grille";
+      ? I18n.t("app.grille_title_actif", { n: subdivisions })
+      : I18n.t("app.grille_title_inactif");
   });
 
   inputFichierCatalogue.addEventListener("change", () => {
@@ -674,7 +747,7 @@
 
   inputFichier.addEventListener("change", () => {
     const fichier = inputFichier.files[0];
-    if (fichier) chargerFichierPlan(fichier);
+    if (fichier) chargerFichierBlueprint(fichier);
     inputFichier.value = "";
   });
 
@@ -692,109 +765,105 @@
     if (Mode.actuel === Mode.EDITION) Catalogue.basculer();
     else Habillage.ajouter();
   });
-  // Menu "Session et utilisateurs" : trois groupes séparés par un trait —
-  // utilisateur actif (renommer/supprimer), liste des utilisateurs
-  // (ajouter/basculer), session (ouvrir/enregistrer un projet). Ouvert par
-  // btn-menu-utilisateur, refermé au choix d'une action ou clic en dehors.
-  btnMenuUtilisateur.addEventListener("click", () => {
-    menuUtilisateur.classList.toggle("visible");
+  // Menu "Plan et propositions" : trois groupes séparés par un trait —
+  // proposition active (renommer/supprimer), liste des propositions
+  // (ajouter/basculer), projet (ouvrir/enregistrer). Ouvert par
+  // btn-menu-proposition, refermé au choix d'une action ou clic en dehors.
+  btnMenuProposition.addEventListener("click", () => {
+    menuProposition.classList.toggle("visible");
   });
   document.addEventListener("pointerdown", (evenement) => {
-    if (!menuUtilisateur.classList.contains("visible")) return;
-    if (menuUtilisateur.contains(evenement.target)) return;
-    if (evenement.target.closest("#btn-menu-utilisateur")) return;
-    menuUtilisateur.classList.remove("visible");
+    if (!menuProposition.classList.contains("visible")) return;
+    if (menuProposition.contains(evenement.target)) return;
+    if (evenement.target.closest("#btn-menu-proposition")) return;
+    menuProposition.classList.remove("visible");
   });
-  btnAjouterUtilisateur.addEventListener("click", () => {
-    menuUtilisateur.classList.remove("visible");
+  btnAjouterProposition.addEventListener("click", () => {
+    menuProposition.classList.remove("visible");
     if (!Viewport.largeurPlan) return;
-    const nom = prompt("Nom du nouvel utilisateur :", `Utilisateur ${Utilisateurs.liste.length + 1}`);
+    const nom = prompt(I18n.t("app.nom_proposition_prompt"), I18n.t("app.proposition_defaut", { n: Propositions.liste.length + 1 }));
     if (nom === null) return; // annulé
-    const dupliquer = Meubles.liste.length > 0 && confirm(
-      "Partir de la disposition actuelle de l'utilisateur actif ?\n\n" +
-      "OK = dupliquer ses meubles déjà posés (positions incluses)\n" +
-      "Annuler = partir d'un plan vide"
-    );
-    Utilisateurs.ajouter(nom.trim(), dupliquer);
+    const dupliquer = Meubles.liste.length > 0 && confirm(I18n.t("app.dupliquer_disposition_confirm"));
+    Propositions.ajouter(nom.trim(), dupliquer);
   });
-  btnRenommerUtilisateur.addEventListener("click", () => {
-    menuUtilisateur.classList.remove("visible");
-    if (!Utilisateurs.courant) return;
-    const nom = prompt("Nouveau nom de l'utilisateur :", Utilisateurs.courant.nom);
+  btnRenommerProposition.addEventListener("click", () => {
+    menuProposition.classList.remove("visible");
+    if (!Propositions.courante) return;
+    const nom = prompt(I18n.t("app.nom_proposition_renommer_prompt"), Propositions.courante.nom);
     if (nom === null) return; // annulé
-    Utilisateurs.renommer(nom.trim());
+    Propositions.renommer(nom.trim());
   });
-  btnSupprimerUtilisateur.addEventListener("click", () => {
-    menuUtilisateur.classList.remove("visible");
-    if (!Utilisateurs.courant) return;
-    if (Utilisateurs.liste.length <= 1) {
-      alert("Impossible de supprimer le dernier utilisateur restant.");
+  btnSupprimerProposition.addEventListener("click", () => {
+    menuProposition.classList.remove("visible");
+    if (!Propositions.courante) return;
+    if (Propositions.liste.length <= 1) {
+      alert(I18n.t("app.derniere_proposition_impossible"));
       return;
     }
-    if (confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur "${Utilisateurs.courant.nom}" ? Sa disposition (meubles posés) sera perdue.`)) {
-      Utilisateurs.supprimer();
+    if (confirm(I18n.t("app.supprimer_proposition_confirm", { nom: Propositions.courante.nom }))) {
+      Propositions.supprimer();
     }
   });
   btnOuvrirProjet.addEventListener("click", () => {
-    menuUtilisateur.classList.remove("visible");
+    menuProposition.classList.remove("visible");
     inputFichierProjet.click();
   });
   btnExporterProjet.addEventListener("click", () => {
-    menuUtilisateur.classList.remove("visible");
+    menuProposition.classList.remove("visible");
     exporterProjet();
   });
 
-  SelecteurSessions.init({
-    overlay: document.getElementById("vue-sessions"),
-    grille: document.getElementById("sessions-grille"),
-    boutonNouvelle: document.getElementById("session-nouvelle")
+  SelecteurPlans.init({
+    overlay: document.getElementById("vue-plans"),
+    grille: document.getElementById("plans-grille"),
+    boutonNouveau: document.getElementById("plan-nouveau")
   });
 
-  // Sidebar (ancrée à gauche) : changer de session sans revenir à l'écran
-  // d'accueil ni recharger la page (voir js/sidebar-sessions.js). La session
-  // en cours est déjà sauvegardée en continu, donc aucune perte au passage
-  // à une autre session.
-  function idSessionActuelle() {
-    return sessionActuelle ? (sessionActuelle.id || sessionActuelle.fichier) : null;
+  // Sidebar (ancrée à gauche) : changer de plan sans revenir à l'écran
+  // d'accueil ni recharger la page (voir js/sidebar-plans.js). Le plan en
+  // cours est déjà sauvegardé en continu, donc aucune perte au passage à un
+  // autre plan.
+  function idPlanActuel() {
+    return planActuel ? (planActuel.id || planActuel.fichier) : null;
   }
 
-  function ouvrirSidebarSessions() {
-    document.body.classList.add("sidebar-sessions-ouverte");
-    SidebarSessions.rafraichir(idSessionActuelle());
+  function ouvrirSidebarPlans() {
+    document.body.classList.add("sidebar-plans-ouverte");
+    SidebarPlans.rafraichir(idPlanActuel());
   }
 
-  function fermerSidebarSessions() {
-    document.body.classList.remove("sidebar-sessions-ouverte");
+  function fermerSidebarPlans() {
+    document.body.classList.remove("sidebar-plans-ouverte");
   }
 
-  SidebarSessions.init({
-    liste: sidebarSessionsListe,
-    boutonNouvelle: sidebarSessionsNouvelle
+  SidebarPlans.init({
+    liste: sidebarPlansListe,
+    boutonNouveau: sidebarPlansNouveau
   });
-  SidebarSessions.alChoix((session) => {
-    fermerSidebarSessions();
-    ouvrirSession(session);
+  SidebarPlans.alChoix((plan) => {
+    fermerSidebarPlans();
+    ouvrirPlan(plan);
   });
-  SidebarSessions.alNouvelle((nom) => {
-    fermerSidebarSessions();
-    ouvrirSession({ nouvelle: true, nom });
+  SidebarPlans.alNouveau((nom) => {
+    fermerSidebarPlans();
+    ouvrirPlan({ nouveau: true, nom });
   });
-  SidebarSessions.alRenommer((session, nouveauNom) => {
-    if (session.id === idSessionActuelle()) {
-      sessionActuelle.nom = nouveauNom;
-      labelSessionActuelle.textContent = nouveauNom;
+  SidebarPlans.alRenommer((plan, nouveauNom) => {
+    if (plan.id === idPlanActuel()) {
+      planActuel.nom = nouveauNom;
+      labelPlanActuel.textContent = nouveauNom;
     }
   });
 
-  sidebarSessionsFermer.addEventListener("click", fermerSidebarSessions);
-  sidebarSessionsFond.addEventListener("click", fermerSidebarSessions);
-  btnSessions.addEventListener("click", () => {
-    if (document.body.classList.contains("sidebar-sessions-ouverte")) {
-      fermerSidebarSessions();
+  sidebarPlansFermer.addEventListener("click", fermerSidebarPlans);
+  sidebarPlansFond.addEventListener("click", fermerSidebarPlans);
+  btnChangerPlan.addEventListener("click", () => {
+    if (document.body.classList.contains("sidebar-plans-ouverte")) {
+      fermerSidebarPlans();
     } else {
-      ouvrirSidebarSessions();
+      ouvrirSidebarPlans();
     }
   });
 
-  demarrerSelectionSession();
+  demarrerSelectionPlan();
 })();

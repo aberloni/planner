@@ -1,5 +1,6 @@
 *.pdf
 *.jpg
 plans/*.json
+catalogue/*.json
 imports/
 projet-planner.json

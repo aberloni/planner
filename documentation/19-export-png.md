@@ -28,7 +28,7 @@ redimensionner.
 ## Ce qui est exporté
 
 Exactement ce qui est visuellement affiché à l'intérieur du cadre, pour
-l'**utilisateur actif** (voir [16-utilisateurs.md](16-utilisateurs.md)) et
+la **proposition active** (voir [16-propositions.md](16-propositions.md)) et
 le **mode courant** (voir [15-modes.md](15-modes.md)) — si un calque est
 masqué (ex. meubles en mode nettoyage), il n'apparaît pas dans l'export,
 comme à l'écran. En sont en revanche toujours exclus : le cadre lui-même,

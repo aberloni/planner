@@ -41,7 +41,7 @@ const Propositions = {
   charger(liste) {
     this.liste = (liste && liste.length)
       ? liste.map((p) => ({ ...p, meubles: p.meubles || [] }))
-      : [{ id: crypto.randomUUID(), nom: "Proposition 1", meubles: [] }];
+      : [{ id: crypto.randomUUID(), nom: I18n.t("app.proposition_defaut", { n: 1 }), meubles: [] }];
     this._activer(this.liste[0]);
   },
 
@@ -60,13 +60,13 @@ const Propositions = {
 
     const proposition = {
       id: crypto.randomUUID(),
-      nom: nom || `Proposition ${this.liste.length + 1}`,
+      nom: nom || I18n.t("app.proposition_defaut", { n: this.liste.length + 1 }),
       meubles
     };
     this._sauvegarderMeublesCourante();
     this.liste.push(proposition);
     this._activer(proposition);
-    Statut.definir(`Proposition ajoutée et active : ${proposition.nom}${dupliquer ? " (disposition dupliquée)" : ""}.`);
+    Statut.definir(I18n.t("propositions.ajoutee", { nom: proposition.nom, suffixe: dupliquer ? I18n.t("propositions.disposition_dupliquee") : "" }));
   },
 
   // Renomme la proposition active (appelée depuis le menu kebab, via prompt()).
@@ -74,7 +74,7 @@ const Propositions = {
     if (!this.courante) return;
     this.courante.nom = nom || this.courante.nom;
     this._actualiserAffichage();
-    Statut.definir(`Proposition renommée : ${this.courante.nom}.`);
+    Statut.definir(I18n.t("propositions.renommee", { nom: this.courante.nom }));
     this._notifier();
   },
 
@@ -90,7 +90,7 @@ const Propositions = {
     const suivante = this.liste[index] || this.liste[index - 1];
     this.courante = null; // évite que _activer resauvegarde les meubles sur la proposition supprimée
     this._activer(suivante);
-    Statut.definir(`Proposition supprimée : ${nom}.`);
+    Statut.definir(I18n.t("propositions.supprimee", { nom }));
   },
 
   basculerVers(proposition) {
@@ -107,7 +107,7 @@ const Propositions = {
     this.courante = proposition;
     Meubles.charger(proposition.meubles);
     this._actualiserAffichage();
-    Statut.definir(`Proposition active : ${proposition.nom}.`);
+    Statut.definir(I18n.t("propositions.active", { nom: proposition.nom }));
     this._notifier();
   },
 

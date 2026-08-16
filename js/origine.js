@@ -36,7 +36,7 @@ const Origine = {
     if (!Viewport.largeurPlan) return;
     this.actif = true;
     this.svg.classList.add("calibration-active");
-    Statut.definir("Origine : cliquez sur le plan pour définir le nouveau point d'origine.");
+    Statut.definir(I18n.t("origine.clic_definir"));
   },
 
   _surClic(point) {
@@ -44,7 +44,7 @@ const Origine = {
     this.actif = false;
     this.svg.classList.remove("calibration-active");
     this.definir(point.x, point.y);
-    Statut.definir("Origine définie : règles et grille recalées sur ce point.");
+    Statut.definir(I18n.t("origine.definie"));
   },
 
   definir(x, y) {

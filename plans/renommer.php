@@ -14,14 +14,14 @@ if (!preg_match('/^[a-zA-Z0-9_-]+\.json$/', $fichier) || $nom === '') {
 $chemin = __DIR__ . '/' . $fichier;
 if (!is_file($chemin)) {
     http_response_code(404);
-    echo json_encode(['erreur' => 'Session introuvable.']);
+    echo json_encode(['erreur' => 'Plan introuvable.']);
     exit;
 }
 
 $donnees = json_decode(file_get_contents($chemin), true);
 if (!is_array($donnees)) {
     http_response_code(400);
-    echo json_encode(['erreur' => 'Session illisible.']);
+    echo json_encode(['erreur' => 'Plan illisible.']);
     exit;
 }
 

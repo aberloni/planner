@@ -1,16 +1,15 @@
 // Catalogue partagé des objets réels d'une maison, à répartir entre les
-// utilisateurs sur le nouveau plan. Grandit au fil de l'eau (rien de
-// prédéfini) : un objet créé par un utilisateur devient immédiatement
-// réutilisable par les autres, sans avoir à le recréer — voir
-// documentation/17-catalogue.md.
+// propositions du plan. Grandit au fil de l'eau (rien de prédéfini) : un
+// objet créé depuis une proposition devient immédiatement réutilisable par
+// les autres, sans avoir à le recréer — voir documentation/17-catalogue.md.
 //
-// Le catalogue est commun à tous les utilisateurs (comme le plan et
+// Le catalogue est commun à toutes les propositions (comme le blueprint et
 // l'habillage) ; seuls les PLACEMENTS (instances posées sur le plan, dans
-// Meubles.liste) sont propres à chaque utilisateur.
+// Meubles.liste) sont propres à chaque proposition.
 const Catalogue = {
 
   id: null, // identifiant unique du catalogue courant, utilisé comme nom de fichier par défaut à l'export
-  liste: [], // [{ id, nom, type, largeur, hauteur }]
+  liste: [], // [{ id, nom, description, type, largeur, hauteur }] — largeur/hauteur en CM (taille réelle du meuble, donnée brute) ; la conversion en px pour un plan donné se fait au contexte (placement, rendu), jamais stockée ici — voir documentation/17-catalogue.md
   ecouteurs: [],
 
   panneau: null,
@@ -53,6 +52,12 @@ const Catalogue = {
   afficher() {
     this._rendre();
     this.panneau.classList.add("visible");
+    // Comptes tous plans confondus (voir EditionCatalogue) : rendu immédiat
+    // avec le compte du seul plan actif (fallback), affiné dès que le
+    // parcours de tous les plans est terminé.
+    EditionCatalogue.rafraichirComptesTousPlans(() => {
+      if (this.panneau.classList.contains("visible")) this._rendre();
+    });
   },
 
   masquer() {
@@ -75,22 +80,22 @@ const Catalogue = {
     if (!modele) return;
     this.masquer();
     EditionCatalogue.afficher();
-    Statut.definir(`Objet créé dans le catalogue : ${modele.nom}. Configurez-le puis choisissez-le pour le poser.`);
+    Statut.definir(I18n.t("catalogue.objet_cree", { nom: modele.nom }));
   },
 
   // Crée une entrée de catalogue sans la placer sur le plan (utilisé par la
   // vue d'édition dédiée du catalogue, qui ne dépend pas d'un plan ouvert).
   creerVide() {
-    const nom = prompt("Nom du nouvel objet (ex. \"Canapé du salon\") :", "");
+    const nom = prompt(I18n.t("catalogue.nom_nouvel_objet_prompt"), "");
     if (!nom || !nom.trim()) return null;
 
-    const pxParCm = Echelle.pxParCm || Echelle.PX_PAR_CM_DEFAUT;
     const modele = {
       id: crypto.randomUUID(),
       nom: nom.trim(),
+      description: "",
       type: PlannerConf.typeParDefaut,
-      largeur: 100 * pxParCm,
-      hauteur: 100 * pxParCm,
+      largeur: 100, // cm, donnée brute — voir liste ci-dessus
+      hauteur: 100,
       hauteurCm: null,
       aDemenager: true
     };
@@ -118,6 +123,22 @@ const Catalogue = {
     this.liste.splice(index, 1);
     this._rendre();
     this._notifier();
+  },
+
+  // Absorbe une liste externe (import d'un ancien fichier projet avec
+  // catalogue embarqué, d'avant le catalogue global — voir
+  // documentation/17-catalogue.md/20-plans.md) : ajoute les entrées dont
+  // l'id n'existe pas déjà, ignore les autres. Retourne le nombre ajouté.
+  fusionner(liste) {
+    if (!liste || !liste.length) return 0;
+    const idsExistants = new Set(this.liste.map((m) => m.id));
+    const nouveaux = liste.filter((m) => !idsExistants.has(m.id));
+    if (nouveaux.length) {
+      this.liste.push(...nouveaux);
+      this._rendre();
+      this._notifier();
+    }
+    return nouveaux.length;
   },
 
   // Reporte le type d'une instance posée sur son modèle de catalogue
@@ -150,13 +171,14 @@ const Catalogue = {
     this._notifier();
   },
 
-  // Reporte la largeur/profondeur (px) d'une instance posée sur son modèle
-  // de catalogue d'origine.
-  synchroniserDimensions(modeleId, largeur, hauteur) {
+  // Reporte la largeur/profondeur (CM — voir liste ci-dessus) d'une instance
+  // posée sur son modèle de catalogue d'origine. L'appelant (objets.js,
+  // redimensionner()) convertit depuis les px de l'instance avant d'appeler.
+  synchroniserDimensions(modeleId, largeurCm, hauteurCm) {
     const modele = this.liste.find((m) => m.id === modeleId);
-    if (!modele || (modele.largeur === largeur && modele.hauteur === hauteur)) return;
-    modele.largeur = largeur;
-    modele.hauteur = hauteur;
+    if (!modele || (modele.largeur === largeurCm && modele.hauteur === hauteurCm)) return;
+    modele.largeur = largeurCm;
+    modele.hauteur = hauteurCm;
     this._notifier();
   },
 
@@ -171,7 +193,7 @@ const Catalogue = {
     if (this.liste.length === 0) {
       const vide = document.createElement("div");
       vide.className = "catalogue-vide";
-      vide.textContent = "Aucun objet pour l'instant.";
+      vide.textContent = I18n.t("catalogue.aucun_objet");
       this.conteneurListe.appendChild(vide);
       return;
     }
@@ -179,8 +201,25 @@ const Catalogue = {
     this.liste.forEach((modele) => {
       const bouton = document.createElement("button");
       bouton.className = "catalogue-item";
-      bouton.appendChild(PlannerConf.iconeElement(modele.type, "catalogue-item-icone"));
-      bouton.appendChild(document.createTextNode(` ${modele.nom}`));
+
+      const groupeIcone = document.createElement("span");
+      groupeIcone.className = "catalogue-item-icone-nom";
+      groupeIcone.appendChild(PlannerConf.iconeElement(modele.type, "catalogue-item-icone"));
+      groupeIcone.appendChild(document.createTextNode(` ${modele.nom}`));
+      bouton.appendChild(groupeIcone);
+
+      // Nombre d'instances déjà posées, TOUS plans confondus (voir
+      // EditionCatalogue.instancesTousPlans) — jamais utilisé nulle part
+      // = mis en avant (léger orange) pour repérer les prefabs oubliés.
+      const quantite = EditionCatalogue.instancesTousPlans(modele.id);
+      bouton.classList.toggle("catalogue-item-non-utilise", quantite === 0);
+
+      const spanQuantite = document.createElement("span");
+      spanQuantite.className = "catalogue-item-quantite";
+      spanQuantite.title = I18n.t("edition_catalogue.quantite_title");
+      spanQuantite.textContent = quantite;
+      bouton.appendChild(spanQuantite);
+
       bouton.addEventListener("click", () => this._choisir(modele));
       this.conteneurListe.appendChild(bouton);
     });

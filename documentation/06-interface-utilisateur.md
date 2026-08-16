@@ -16,13 +16,12 @@
 
 - **Barre d'outils** (haut) : actions globales sur le projet, réparties en
   3 groupes (`#barre-outils` en grid 3 colonnes) :
-  - **Gauche** : import plan, échelle, cadrage.
-  - **Centre** : chargement/sauvegarde — ouvrir/enregistrer projet, import/
-    export/impression du catalogue, export PNG.
-  - **Droite** : système d'utilisateurs (voir
-    [16-utilisateurs.md](16-utilisateurs.md)).
-- **Zone de travail** (tout le reste de l'écran) : le plan (image de fond)
-  + l'habillage + les meubles posés, en SVG. Support du zoom (molette,
+  - **Gauche** : changer de plan, import blueprint, échelle, origine.
+  - **Droite** : menu "Plan et propositions" (voir
+    [16-propositions.md](16-propositions.md)) — ouvrir/enregistrer projet,
+    propositions.
+- **Zone de travail** (tout le reste de l'écran) : le blueprint (image de
+  fond) + l'habillage + les meubles posés, en SVG. Support du zoom (molette,
   double-clic, ou contrôles flottants) et du pan (clic sur le fond,
   maintenir, glisser).
 - **Contrôles de zoom** (flottants, haut-gauche du viewport) : `-` /

@@ -2,9 +2,15 @@
 
 App web locale pour placer, déplacer et faire pivoter des meubles sur un plan de maison 2D — sans installation, sans backend, directement dans le navigateur.
 
+## Auteur
+
+Réalisé par Andres Berlonus.
+
 ## Contexte
 
-Projet personnel créé pour un besoin concret : tester des agencements de meubles sur un plan de maison avant un déménagement/aménagement réel, sans avoir à ouvrir un logiciel de CAO lourd. Codé avec [Claude Code](https://claude.com/claude-code) en mode "vibe coding" — l'essentiel de la réflexion (contraintes, périmètre, modèle de données) est documenté au fil de l'eau dans [`documentation/`](documentation/) avant chaque étape de code.
+Projet personnel créé pour un besoin concret : tester des agencements de meubles sur un plan de maison avant un déménagement/aménagement réel, sans avoir à ouvrir un logiciel de CAO lourd. 
+
+**Claude-d** (entièrement réalisé avec Claude Code) — l'essentiel de la réflexion (contraintes, périmètre, modèle de données) est documenté au fil de l'eau dans [`documentation/`](documentation/) avant chaque étape de code.
 
 ## But
 
@@ -26,9 +32,12 @@ Projet personnel créé pour un besoin concret : tester des agencements de meubl
 - **Utilisateurs / propositions** — plusieurs propositions d'aménagement sur un même plan partagé.
 - **Sessions** — écran de choix au démarrage, sauvegarde locale (`localStorage`) ou fichiers si servi via PHP.
 - **Export PNG** — cadre de sélection redimensionnable, export de la zone choisie en image.
-- **Undo/redo** sur les actions de placement, rotation, suppression.
 
 Documentation complète et historique de conception : [`documentation/README.md`](documentation/README.md).
+
+## Icônes
+
+Icônes fournies par [Iconify](https://iconify.design/).
 
 ## Lancer l'app
 

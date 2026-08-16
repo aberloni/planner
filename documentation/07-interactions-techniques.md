@@ -85,15 +85,28 @@ contenant un `<rect>` centré sur `(0,0)` localement, transformé via
 
 ## Redimensionnement
 
-Pas de poignée de redimensionnement sur le plan : la taille d'un meuble est
-un attribut du **prefab** (catalogue), partagé entre toutes ses instances —
-voir [17-catalogue.md](17-catalogue.md). Elle se change depuis la vue
+Deux poignées de coin (carrés bas-gauche/haut-droit), enfants du `<g>` pivoté
+du meuble (suivent donc sa rotation, comme la poignée de rotation) — créées
+uniquement pour l'objet sélectionné. Glisser une poignée ancre le coin
+opposé (fixe, calculé une fois au pointerdown dans le repère MONDE) ; à
+chaque déplacement, le curseur est reprojeté dans le repère LOCAL (tourné,
+figé pendant tout le drag) de l'objet pour en déduire largeur/hauteur
+(valeur absolue, bornée à un minimum de 5px plan) et le nouveau centre —
+voir `_surPointerDownTaille` dans `js/objets.js`.
+
+La taille d'un meuble posé depuis le catalogue est un attribut du **prefab**,
+partagé entre toutes ses instances — voir [17-catalogue.md](17-catalogue.md).
+`Objets.redimensionner`/`_definirTaille` (dans `js/objets.js`) appliquent la
+nouvelle taille sur le plan et rafraîchissent en direct : icône/nom (taille +
+position), poignée de rotation (distance dépend de la hauteur), poignées de
+coin elles-mêmes, infobulle de dimensions. `redimensionner` reporte aussi la
+nouvelle taille (cm) sur le prefab du catalogue ET sur toutes ses autres
+instances déjà posées, dans toutes les propositions du plan actif (voir
+`_propagerTailleAuxAutresInstances`) — pour rester cohérent avec un catalogue
+partagé. Le redimensionnement reste également possible depuis la vue
 d'édition du catalogue (`js/edition-catalogue.js`) ou, si une instance est
-posée, directement depuis l'inspecteur (champs largeur/profondeur en lecture
-seule + bouton "Éditer dans le catalogue"). `Objets.redimensionner`/
-`_definirTaille` (dans `js/objets.js`) appliquent la nouvelle taille sur le
-plan et rafraîchissent en direct : icône/nom (taille + position), poignée de
-rotation (distance dépend de la hauteur), infobulle de dimensions.
+posée, depuis l'inspecteur (champs largeur/profondeur en lecture seule +
+bouton "Éditer dans le catalogue").
 
 ## Historique (undo/redo, pas encore implémenté)
 

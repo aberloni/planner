@@ -53,9 +53,13 @@ const Viewport = {
   },
 
   // Niveau de zoom actuel (1 = 100%, plan affiché à sa taille naturelle).
+  // Basé sur l'échelle optique réelle (zoneAffichage().echelle), pas
+  // seulement sur viewBox.largeur : sinon ce chiffre diverge de ce
+  // qu'affichent les règles/la grille/le gizmo d'échelle dès qu'il y a du
+  // letterboxing (ratio du plan différent de celui de la zone de travail).
   zoomActuel() {
     if (!this.largeurPlan) return 1;
-    return this.largeurPlan / this.viewBox.largeur;
+    return this.zoneAffichage().echelle;
   },
 
   // Charge le plan : crée/replace l'image de fond et cadre le viewBox dessus.
@@ -101,28 +105,36 @@ const Viewport = {
   cadrerSurRectangle(rect) {
     if (!this.largeurPlan || !rect) return;
     const PADDING_RATIO = 0.2;
-    let largeur = rect.largeur * (1 + PADDING_RATIO * 2);
-    let hauteur = rect.hauteur * (1 + PADDING_RATIO * 2);
+    const rectLargeur = rect.largeur * (1 + PADDING_RATIO * 2);
+    const rectHauteur = rect.hauteur * (1 + PADDING_RATIO * 2);
 
     const conteneur = this.svg.getBoundingClientRect();
     const centreX = rect.x + rect.largeur / 2;
     let centreY = rect.y + rect.hauteur / 2;
+    let largeur = rectLargeur;
+    let hauteur = rectHauteur;
 
     if (conteneur.width && conteneur.height) {
-      const ratioConteneur = conteneur.width / conteneur.height;
-      const ratioCible = largeur / hauteur;
-      if (ratioCible > ratioConteneur) hauteur = largeur / ratioConteneur;
-      else largeur = hauteur * ratioConteneur;
-
-      // Le SVG (preserveAspectRatio "meet") centre toujours son viewBox
-      // sur le centre géométrique exact de sa propre boîte — mais cette
-      // boîte n'est pas entièrement dégagée à l'écran : les contrôles de
-      // zoom (haut) et les boutons ronds (bas) empiètent dessus, et pas de
-      // façon symétrique. On décale donc le centre du viewBox pour que le
-      // rendu paraisse centré sur la zone réellement visible, pas sur la
-      // boîte SVG complète (sinon padding visuellement inégal en haut/bas).
-      const echelle = conteneur.height / hauteur;
+      // Le SVG (preserveAspectRatio "meet") rend toujours à l'échelle
+      // min(largeurConteneur/viewBoxLargeur, hauteurConteneur/viewBoxHauteur)
+      // calculée sur sa boîte complète — mais seule la zone dégagée
+      // verticalement (hors contrôles de zoom en haut, boutons ronds en bas)
+      // est réellement visible à l'écran. Si on calcule l'échelle sur la
+      // hauteur complète du conteneur, le rectangle+padding déborde donc
+      // sous les contrôles flottants sans que ça dézoome pour compenser. On
+      // calcule ici l'échelle qui fait tenir le rectangle+padding dans
+      // largeurConteneur x hauteurDégagée, puis on en déduit le viewBox
+      // (sur la boîte complète) correspondant à cette échelle.
       const zone = this._zoneVerticaleDegagee(conteneur);
+      const hauteurDegagee = zone.bas - zone.haut;
+      const echelle = Math.min(conteneur.width / rectLargeur, hauteurDegagee / rectHauteur);
+      largeur = conteneur.width / echelle;
+      hauteur = conteneur.height / echelle;
+
+      // Le SVG centre toujours son viewBox sur le centre géométrique exact
+      // de sa boîte complète : on décale donc le centre du viewBox pour que
+      // le rendu paraisse centré sur la zone dégagée, pas sur la boîte
+      // entière (sinon padding visuellement inégal en haut/bas).
       const centreZoneY = (zone.haut + zone.bas) / 2;
       const centreConteneurY = conteneur.top + conteneur.height / 2;
       centreY -= (centreZoneY - centreConteneurY) / echelle;
@@ -139,46 +151,51 @@ const Viewport = {
 
   // Bornes verticales (coordonnées écran) de la zone du viewport non
   // couverte par le chrome flottant (#controles-zoom en haut, boutons ronds
-  // en bas) — utilisé par cadrerSurRectangle pour centrer sur l'espace
-  // réellement visible. Repli sur la boîte SVG complète si un élément est
-  // absent/caché (getBoundingClientRect renvoie alors une largeur nulle).
+  // ".bouton-rond" en bas) — utilisé par cadrerSurRectangle pour centrer sur
+  // l'espace réellement visible. Repli sur la boîte SVG complète si un
+  // élément est absent/caché (getBoundingClientRect renvoie alors une
+  // largeur nulle) — ex. les boutons ronds masqués tant qu'aucun blueprint
+  // n'est chargé.
   _zoneVerticaleDegagee(conteneur) {
     const MARGE = 12;
     const controles = document.getElementById("controles-zoom");
-    const boutonBas = document.getElementById("btn-mode");
     const rectControles = controles && controles.getBoundingClientRect().width ? controles.getBoundingClientRect() : null;
-    const rectBoutonBas = boutonBas && boutonBas.getBoundingClientRect().width ? boutonBas.getBoundingClientRect() : null;
+
+    // Le haut des boutons ronds du bas (le plus proche du plan parmi ceux
+    // visibles) : pas d'id unique fiable, leur composition change (ex.
+    // "Mode édition" déplacé vers la barre d'outils en 08-16 — voir
+    // CHANGELOG), d'où une classe partagée plutôt qu'un id en dur.
+    const rectsBoutonsBas = [...document.querySelectorAll(".bouton-rond")]
+      .map((el) => el.getBoundingClientRect())
+      .filter((r) => r.width);
+    const topBoutonsBas = rectsBoutonsBas.length ? Math.min(...rectsBoutonsBas.map((r) => r.top)) : null;
 
     let haut = rectControles ? rectControles.bottom + MARGE : conteneur.top;
-    let bas = rectBoutonBas ? rectBoutonBas.top - MARGE : conteneur.bottom;
+    let bas = topBoutonsBas !== null ? topBoutonsBas - MARGE : conteneur.bottom;
     haut = Math.min(Math.max(haut, conteneur.top), conteneur.bottom);
     bas = Math.max(Math.min(bas, conteneur.bottom), conteneur.top);
 
     return haut < bas ? { haut, bas } : { haut: conteneur.top, bas: conteneur.bottom };
   },
 
-  // Applique un viewBox exact (calculé ailleurs, ex. pour reproduire le
-  // cadrage d'une session précédente au changement de session — voir
-  // app.js, capturerCadrage/appliquerCadrage).
-  definirViewBox(vb) {
-    if (!this.largeurPlan) return;
-    this.viewBox = { ...vb };
-    this._appliquerViewBox();
-  },
-
-  // Revient à 100% de zoom en gardant le centre de la vue actuelle fixe
-  // (pas de reset du pan) — utilisé par le bouton "%age" des contrôles de
-  // zoom, à la différence de reinitialiserZoom() (bouton "Cadrer").
+  // Revient à 100% de zoom (1 px du plan = 1 px écran) en gardant le centre
+  // de la vue actuelle fixe (pas de reset du pan) — utilisé par le bouton
+  // "%age" des contrôles de zoom, à la différence de reinitialiserZoom()
+  // (bouton "Cadrer"). Le viewBox doit reprendre exactement les dimensions
+  // (en px CSS) de la zone de travail, pas celles du plan : sinon, dès que
+  // le ratio du plan diffère de celui du conteneur (letterboxing), on
+  // obtient un zoom <100% malgré le label — voir zoneAffichage().
   zoomA100() {
     if (!this.largeurPlan) return;
     const vb = this.viewBox;
     const centreX = vb.x + vb.largeur / 2;
     const centreY = vb.y + vb.hauteur / 2;
+    const rect = this.svg.getBoundingClientRect();
     this.viewBox = {
-      x: centreX - this.largeurPlan / 2,
-      y: centreY - this.hauteurPlan / 2,
-      largeur: this.largeurPlan,
-      hauteur: this.hauteurPlan
+      x: centreX - rect.width / 2,
+      y: centreY - rect.height / 2,
+      largeur: rect.width,
+      hauteur: rect.height
     };
     this._appliquerViewBox();
   },

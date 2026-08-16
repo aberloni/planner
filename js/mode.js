@@ -38,10 +38,10 @@ const Mode = {
   _actualiserBouton() {
     if (this.actuel === this.CLEAN) {
       this.bouton.innerHTML = '<img class="barre-icone" src="icones/ui/mode-nettoyage.svg" alt="">';
-      this.bouton.title = "Mode nettoyage (masquer des éléments du plan) — cliquer pour repasser en édition";
+      this.bouton.title = I18n.t("mode.nettoyage_title");
     } else {
       this.bouton.innerHTML = '<img class="barre-icone" src="icones/ui/mode-edition.svg" alt="">';
-      this.bouton.title = "Mode édition (placer des meubles) — cliquer pour passer en nettoyage";
+      this.bouton.title = I18n.t("mode.edition_title");
     }
   }
 };

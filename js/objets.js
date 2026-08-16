@@ -1,8 +1,12 @@
 // Fabrique un module de gestion d'objets rectangulaires posés dans un calque
-// SVG : sélectionnables (clic simple), déplaçables et pivotables (poignée
-// dédiée, paliers de 90°). Pas de redimensionnement ici : la taille dépend du
-// prefab (catalogue), voir js/edition-catalogue.js et js/catalogue.js.
-// Utilisé pour créer Meubles (objets typés, voir planner.conf.js) et Habillage
+// SVG : sélectionnables (clic simple), déplaçables, pivotables (poignée
+// dédiée, paliers de 90°) et redimensionnables (poignées de coin bas-gauche/
+// haut-droit). Pour les objets avec prefab (modeleId, donc Meubles),
+// redimensionner reporte la nouvelle taille (cm) sur le prefab du catalogue
+// ET sur toutes ses autres instances déjà posées (toutes propositions du
+// plan actif) — voir redimensionner()/_propagerTailleAuxAutresInstances(),
+// js/catalogue.js et documentation/17-catalogue.md.
+// Utilisé pour créer Meubles (objets typés, voir js/planner.conf.js) et Habillage
 // (masques blancs, sans type) — voir documentation/15-modes.md.
 //
 // Règle d'arbitrage clic/pan (voir documentation/07-interactions-techniques.md) :
@@ -27,6 +31,7 @@ function creerModuleObjets(options) {
     elements: new Map(), // id -> { g, rect }
     selectionnee: null,
     poignee: null, // { ligne, cercle } de rotation de l'objet sélectionné
+    poigneesTaille: null, // { bg, hd } coins de redimensionnement de l'objet sélectionné
     ecouteurs: [], // callbacks appelés après un ajout/déplacement/redimensionnement/rotation/renommage
     actif: true, // si faux, n'est plus sélectionnable (géré par Mode, voir js/mode.js)
 
@@ -95,7 +100,7 @@ function creerModuleObjets(options) {
       this._creerElement(objet);
       this._reordonnerDom();
       this._selectionner(objet);
-      Statut.definir(`${LIBELLE_DEFAUT} ajouté et sélectionné : ${objet.libelle}.`);
+      Statut.definir(I18n.t("objets.ajoute_selectionne", { libelleDefaut: LIBELLE_DEFAUT, libelle: objet.libelle }));
       this._notifier();
     },
 
@@ -107,6 +112,11 @@ function creerModuleObjets(options) {
     ajouterDepuisModele(modele) {
       if (!AVEC_TYPE || !Viewport.largeurPlan) return;
 
+      // Le catalogue stocke la taille réelle en cm (donnée brute, voir
+      // js/catalogue.js) ; l'instance posée est en px, convertie selon
+      // l'échelle du plan actif — dérivée au contexte, jamais stockée telle
+      // quelle dans le catalogue.
+      const pxParCm = Echelle.pxParCm || Echelle.PX_PAR_CM_DEFAUT;
       const vb = Viewport.viewBox;
       const objet = {
         id: crypto.randomUUID(),
@@ -117,8 +127,8 @@ function creerModuleObjets(options) {
         zOrdre: "normal",
         x: vb.x + vb.largeur / 2,
         y: vb.y + vb.hauteur / 2,
-        largeur: modele.largeur,
-        hauteur: modele.hauteur,
+        largeur: modele.largeur * pxParCm,
+        hauteur: modele.hauteur * pxParCm,
         rotation: 0,
         hauteurCm: modele.hauteurCm ?? null, // hauteur réelle (verticale) — voir ajouter()
         aDemenager: modele.aDemenager !== false
@@ -128,7 +138,7 @@ function creerModuleObjets(options) {
       this._creerElement(objet);
       this._reordonnerDom();
       this._selectionner(objet);
-      Statut.definir(`${LIBELLE_DEFAUT} ajouté et sélectionné : ${objet.libelle}.`);
+      Statut.definir(I18n.t("objets.ajoute_selectionne", { libelleDefaut: LIBELLE_DEFAUT, libelle: objet.libelle }));
       this._notifier();
     },
 
@@ -192,7 +202,7 @@ function creerModuleObjets(options) {
     },
 
     // Construit l'élément SVG de l'icône d'un type : <image> pointant vers le
-    // SVG dédié dans icones/ (voir planner.conf.js, PlannerConf.icone —
+    // SVG dédié dans icones/ (voir js/planner.conf.js, PlannerConf.icone —
     // convention icones/<id>.svg, pas de repli).
     _construireIcone(typeId) {
       const type = PlannerConf.trouverType(typeId);
@@ -285,7 +295,7 @@ function creerModuleObjets(options) {
       this.elements.get(objet.id).g.remove();
       this.elements.delete(objet.id);
       this.liste = this.liste.filter((o) => o !== objet);
-      Statut.definir(`Supprimé : ${objet.libelle}.`);
+      Statut.definir(I18n.t("objets.supprime", { libelle: objet.libelle }));
       this._notifier();
     },
 
@@ -344,7 +354,7 @@ function creerModuleObjets(options) {
       this._appliquerTailleEtiquettes(objet, elements.texteIcone, elements.texteNom);
       this._appliquerContreRotationEtiquettes(objet);
 
-      Statut.definir(`Type changé : ${objet.libelle} -> ${PlannerConf.trouverType(typeId).libelle}.`);
+      Statut.definir(I18n.t("objets.type_change", { libelle: objet.libelle, type: PlannerConf.trouverType(typeId).libelle }));
 
       // Garde l'icône du catalogue synchronisée : sans ça, une entrée créée
       // avec le type par défaut (générique) restait figée sur cette icône
@@ -364,7 +374,7 @@ function creerModuleObjets(options) {
       if (!AVEC_TYPE) return;
       objet.hauteurCm = (cm === null || cm === "" || isNaN(cm)) ? null : cm;
       if (objet.modeleId) Catalogue.synchroniserHauteurCm(objet.modeleId, objet.hauteurCm);
-      Statut.definir(`Hauteur réelle : ${objet.libelle} -> ${objet.hauteurCm ?? "non définie"} cm.`);
+      Statut.definir(I18n.t("objets.hauteur_reelle", { libelle: objet.libelle, valeur: objet.hauteurCm ?? I18n.t("objets.non_definie") }));
       this._notifier();
     },
 
@@ -378,7 +388,7 @@ function creerModuleObjets(options) {
       if (!AVEC_TYPE) return;
       objet.aDemenager = !!aDemenager;
       if (objet.modeleId) Catalogue.synchroniserADemenager(objet.modeleId, objet.aDemenager);
-      Statut.definir(`${objet.libelle} -> ${objet.aDemenager ? "à déménager" : "non déménagé"}.`);
+      Statut.definir(I18n.t("objets.a_demenager_statut", { libelle: objet.libelle, statut: objet.aDemenager ? I18n.t("objets.a_demenager_oui") : I18n.t("objets.a_demenager_non") }));
       this._notifier();
     },
 
@@ -434,7 +444,7 @@ function creerModuleObjets(options) {
     definirForme(objet, forme) {
       objet.forme = forme;
       this._appliquerForme(this.elements.get(objet.id).rect, objet);
-      Statut.definir(`Forme changée : ${objet.libelle} -> ${forme}.`);
+      Statut.definir(I18n.t("objets.forme_changee", { libelle: objet.libelle, forme }));
       this._notifier();
     },
 
@@ -478,7 +488,7 @@ function creerModuleObjets(options) {
       this._appliquerClasseZOrdre(elements.g, objet);
       if (elements.texteIcone) this._appliquerTailleEtiquettes(objet, elements.texteIcone, elements.texteNom);
 
-      Statut.definir(`Ordre d'affichage : ${objet.libelle} -> ${niveau}.`);
+      Statut.definir(I18n.t("objets.ordre_affichage_statut", { libelle: objet.libelle, niveau }));
       this._notifier();
     },
 
@@ -500,7 +510,7 @@ function creerModuleObjets(options) {
       this._creerElement(copie);
       this._reordonnerDom();
       this._selectionner(copie);
-      Statut.definir(`Dupliqué : ${copie.libelle}.`);
+      Statut.definir(I18n.t("objets.duplique", { libelle: copie.libelle }));
       this._notifier();
     },
 
@@ -552,7 +562,8 @@ function creerModuleObjets(options) {
       this.selectionnee = objet;
       this.elements.get(objet.id).g.classList.add("selectionne");
       this._creerPoignee(objet);
-      Statut.definir(`Sélectionné : ${objet.libelle}.`);
+      this._creerPoigneesTaille(objet);
+      Statut.definir(I18n.t("objets.selectionne", { libelle: objet.libelle }));
       Inspecteur.afficher(objet, this);
     },
 
@@ -565,8 +576,9 @@ function creerModuleObjets(options) {
       if (!this.selectionnee) return;
       this.elements.get(this.selectionnee.id).g.classList.remove("selectionne");
       this._supprimerPoignee();
+      this._supprimerPoigneesTaille();
       this.selectionnee = null;
-      Statut.definir("Aucune sélection.");
+      Statut.definir(I18n.t("objets.aucune_selection"));
       Inspecteur.masquer();
     },
 
@@ -603,13 +615,58 @@ function creerModuleObjets(options) {
       this.poignee = null;
     },
 
-    // Repositionne la poignée après un redimensionnement (sa distance dépend de la hauteur).
+    // Repositionne la poignée de rotation après un redimensionnement (sa
+    // distance dépend de la hauteur) — et les poignées de taille elles-mêmes.
     _repositionnerPoignee(objet) {
-      if (!this.poignee || this.selectionnee !== objet) return;
-      const distance = objet.hauteur / 2 + this.DISTANCE_POIGNEE;
-      this.poignee.ligne.setAttribute("y1", -objet.hauteur / 2);
-      this.poignee.ligne.setAttribute("y2", -distance);
-      this.poignee.cercle.setAttribute("cy", -distance);
+      if (this.selectionnee !== objet) return;
+      if (this.poignee) {
+        const distance = objet.hauteur / 2 + this.DISTANCE_POIGNEE;
+        this.poignee.ligne.setAttribute("y1", -objet.hauteur / 2);
+        this.poignee.ligne.setAttribute("y2", -distance);
+        this.poignee.cercle.setAttribute("cy", -distance);
+      }
+      this._positionnerPoigneesTaille(objet);
+    },
+
+    // Poignées de redimensionnement : deux carrés aux coins bas-gauche et
+    // haut-droit, enfants du <g> pivoté de l'objet (suivent donc sa rotation
+    // automatiquement, comme la poignée de rotation). Glisser l'une ancre le
+    // coin opposé (fixe) — voir _surPointerDownTaille.
+    TAILLE_POIGNEE_TAILLE: 10, // px plan, côté du carré
+
+    _creerPoigneesTaille(objet) {
+      const { g } = this.elements.get(objet.id);
+      const bg = document.createElementNS(this.NS, "rect");
+      const hd = document.createElementNS(this.NS, "rect");
+      bg.setAttribute("class", "poignee-taille");
+      hd.setAttribute("class", "poignee-taille");
+      bg.addEventListener("pointerdown", (evenement) => this._surPointerDownTaille(evenement, objet, g, "bg"));
+      hd.addEventListener("pointerdown", (evenement) => this._surPointerDownTaille(evenement, objet, g, "hd"));
+      g.appendChild(bg);
+      g.appendChild(hd);
+      this.poigneesTaille = { bg, hd };
+      this._positionnerPoigneesTaille(objet);
+    },
+
+    _positionnerPoigneesTaille(objet) {
+      if (!this.poigneesTaille || this.selectionnee !== objet) return;
+      const cote = this.TAILLE_POIGNEE_TAILLE;
+      const { bg, hd } = this.poigneesTaille;
+      bg.setAttribute("x", -objet.largeur / 2 - cote / 2);
+      bg.setAttribute("y", objet.hauteur / 2 - cote / 2);
+      bg.setAttribute("width", cote);
+      bg.setAttribute("height", cote);
+      hd.setAttribute("x", objet.largeur / 2 - cote / 2);
+      hd.setAttribute("y", -objet.hauteur / 2 - cote / 2);
+      hd.setAttribute("width", cote);
+      hd.setAttribute("height", cote);
+    },
+
+    _supprimerPoigneesTaille() {
+      if (!this.poigneesTaille) return;
+      this.poigneesTaille.bg.remove();
+      this.poigneesTaille.hd.remove();
+      this.poigneesTaille = null;
     },
 
     // Renomme l'objet sélectionné (appelé depuis l'inspecteur).
@@ -620,7 +677,7 @@ function creerModuleObjets(options) {
         this._ajusterNomEtiquette(objet, elements.texteNom, this._tailleDepartNom(objet));
       }
       elements.titre.textContent = this._texteDimensions(objet);
-      Statut.definir(`Renommé : ${objet.libelle}.`);
+      Statut.definir(I18n.t("objets.renomme", { libelle: objet.libelle }));
       this._notifier();
     },
 
@@ -641,14 +698,52 @@ function creerModuleObjets(options) {
     },
 
     // Redimensionne l'objet sélectionné, en pixels plan (appelé depuis
-    // l'inspecteur, qui convertit depuis les cm saisis) : applique + notifie en un coup.
+    // l'inspecteur ou la poignée de coin sur le plan) : applique + notifie en
+    // un coup.
     redimensionner(objet, largeurPx, hauteurPx) {
       this._definirTaille(objet, largeurPx, hauteurPx);
       if (objet.modeleId && typeof Catalogue !== "undefined") {
-        Catalogue.synchroniserDimensions(objet.modeleId, objet.largeur, objet.hauteur);
+        // Reconversion px -> cm : le catalogue ne garde que la donnée brute
+        // (voir js/catalogue.js), jamais la taille en px d'un plan particulier.
+        const pxParCm = Echelle.pxParCm || Echelle.PX_PAR_CM_DEFAUT;
+        const largeurCm = objet.largeur / pxParCm;
+        const hauteurCm = objet.hauteur / pxParCm;
+        Catalogue.synchroniserDimensions(objet.modeleId, largeurCm, hauteurCm);
+        this._propagerTailleAuxAutresInstances(objet, largeurCm, hauteurCm);
       }
-      Statut.definir(`Redimensionné : ${objet.libelle}.`);
+      Statut.definir(I18n.t("objets.redimensionne", { libelle: objet.libelle }));
       this._notifier();
+    },
+
+    // Reporte la nouvelle taille (cm) sur toutes les AUTRES instances déjà
+    // posées du même prefab, dans toutes les propositions du plan actif — le
+    // catalogue est partagé (voir js/catalogue.js), on attend donc que
+    // toutes ses instances restent cohérentes en taille. N'a d'effet que
+    // pour les modules avec prefab (objet.modeleId défini, donc Meubles).
+    _propagerTailleAuxAutresInstances(objet, largeurCm, hauteurCm) {
+      if (typeof Propositions === "undefined") return;
+      const pxParCm = Echelle.pxParCm || Echelle.PX_PAR_CM_DEFAUT;
+      const largeurPx = largeurCm * pxParCm;
+      const hauteurPx = hauteurCm * pxParCm;
+
+      // Proposition active : instances déjà affichées (DOM) — mise à jour
+      // visuelle immédiate.
+      this.liste.forEach((autre) => {
+        if (autre === objet || autre.modeleId !== objet.modeleId) return;
+        this._definirTaille(autre, largeurPx, hauteurPx);
+      });
+
+      // Autres propositions du même plan : simples données tant qu'inactives
+      // (pas de DOM) — se redessineront à la bonne taille à la prochaine
+      // bascule (voir js/propositions.js, Meubles.charger()).
+      Propositions.liste.forEach((proposition) => {
+        if (proposition === Propositions.courante) return;
+        (proposition.meubles || []).forEach((autre) => {
+          if (autre.modeleId !== objet.modeleId) return;
+          autre.largeur = largeurPx;
+          autre.hauteur = hauteurPx;
+        });
+      });
     },
 
     // N'intercepte que le drag de l'objet déjà sélectionné ; sinon on laisse
@@ -686,7 +781,7 @@ function creerModuleObjets(options) {
         g.removeEventListener("pointermove", surMove);
         g.removeEventListener("pointerup", surUp);
         g.removeEventListener("pointercancel", surUp);
-        Statut.definir(`Déplacé : ${objet.libelle} (sélection conservée).`);
+        Statut.definir(I18n.t("objets.deplace", { libelle: objet.libelle }));
         this._notifier();
       };
 
@@ -721,13 +816,78 @@ function creerModuleObjets(options) {
         cercle.removeEventListener("pointermove", surMove);
         cercle.removeEventListener("pointerup", surUp);
         cercle.removeEventListener("pointercancel", surUp);
-        Statut.definir(`Rotation : ${objet.libelle} à ${objet.rotation}°.`);
+        Statut.definir(I18n.t("objets.rotation_statut", { libelle: objet.libelle, rotation: objet.rotation }));
         this._notifier();
       };
 
       cercle.addEventListener("pointermove", surMove);
       cercle.addEventListener("pointerup", surUp);
       cercle.addEventListener("pointercancel", surUp);
+    },
+
+    // Glisser une poignée de coin (bas-gauche "bg"/haut-droit "hd") :
+    // redimensionne en ancrant le coin opposé, dans le repère LOCAL (tourné)
+    // de l'objet — la rotation reste figée pendant tout le drag. Le coin
+    // ancré est calculé une fois au pointerdown (position monde figée) ;
+    // à chaque déplacement, le curseur est reprojeté dans ce repère local
+    // pour en déduire largeur/hauteur (valeur absolue, bornée à un minimum)
+    // et le nouveau centre (milieu ancre/coin glissé, reconverti en monde).
+    _surPointerDownTaille(evenement, objet, g, coin) {
+      evenement.stopPropagation();
+      evenement.preventDefault();
+      const poignee = evenement.currentTarget;
+      poignee.setPointerCapture(evenement.pointerId);
+
+      const rad = (objet.rotation * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+
+      // Coin ancré = opposé du coin glissé, en repère local pré-rotation.
+      const ancreLocale = coin === "hd"
+        ? { x: -objet.largeur / 2, y: objet.hauteur / 2 } // bas-gauche
+        : { x: objet.largeur / 2, y: -objet.hauteur / 2 }; // haut-droit
+      const signeX = coin === "hd" ? 1 : -1;
+      const signeY = coin === "hd" ? -1 : 1;
+
+      const ancreMonde = {
+        x: objet.x + ancreLocale.x * cos - ancreLocale.y * sin,
+        y: objet.y + ancreLocale.x * sin + ancreLocale.y * cos
+      };
+
+      const TAILLE_MIN = 5; // px plan
+
+      const surMove = (ev) => {
+        const point = Viewport.versCoordonneesViewBox(ev.clientX, ev.clientY);
+        const dxMonde = point.x - ancreMonde.x;
+        const dyMonde = point.y - ancreMonde.y;
+
+        // Repère local pré-rotation : R(-rotation) appliqué au delta monde.
+        let dxLocal = dxMonde * cos + dyMonde * sin;
+        let dyLocal = -dxMonde * sin + dyMonde * cos;
+        dxLocal = signeX > 0 ? Math.max(TAILLE_MIN, dxLocal) : Math.min(-TAILLE_MIN, dxLocal);
+        dyLocal = signeY > 0 ? Math.max(TAILLE_MIN, dyLocal) : Math.min(-TAILLE_MIN, dyLocal);
+
+        const centreLocalX = dxLocal / 2;
+        const centreLocalY = dyLocal / 2;
+        objet.x = ancreMonde.x + centreLocalX * cos - centreLocalY * sin;
+        objet.y = ancreMonde.y + centreLocalX * sin + centreLocalY * cos;
+
+        this._definirTaille(objet, Math.abs(dxLocal), Math.abs(dyLocal));
+        this._appliquerTransform(g, objet);
+        Inspecteur.actualiserLectureSeule(objet);
+      };
+
+      const surUp = (ev) => {
+        poignee.releasePointerCapture(ev.pointerId);
+        poignee.removeEventListener("pointermove", surMove);
+        poignee.removeEventListener("pointerup", surUp);
+        poignee.removeEventListener("pointercancel", surUp);
+        this.redimensionner(objet, objet.largeur, objet.hauteur);
+      };
+
+      poignee.addEventListener("pointermove", surMove);
+      poignee.addEventListener("pointerup", surUp);
+      poignee.addEventListener("pointercancel", surUp);
     },
 
   };

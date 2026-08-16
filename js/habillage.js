@@ -3,7 +3,7 @@
 // (sélectionnables) uniquement en mode nettoyage — voir documentation/15-modes.md.
 const Habillage = creerModuleObjets({
   avecType: false,
-  libelleDefaut: "Masque",
+  libelleDefaut: I18n.t("objets.libelle_masque"),
   couleurFixe: "#ffffff",
   supprimerAuDoubleClic: true
 });

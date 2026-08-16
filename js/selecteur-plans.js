@@ -50,13 +50,13 @@ const SelecteurPlans = {
     detail.className = "plan-carte-detail";
     detail.textContent = plan.propositions.length
       ? plan.propositions.join(", ")
-      : "Aucune proposition pour l'instant";
+      : I18n.t("plans.aucune_proposition");
     carte.appendChild(detail);
 
     if (plan.modifie) {
       const date = document.createElement("div");
       date.className = "plan-carte-date";
-      date.textContent = `Modifié le ${new Date(plan.modifie).toLocaleString("fr-FR")}`;
+      date.textContent = I18n.t("plans.modifie_le", { date: new Date(plan.modifie).toLocaleString(I18n.langue === "en" ? "en-US" : "fr-FR") });
       carte.appendChild(date);
     }
 
@@ -72,11 +72,11 @@ const SelecteurPlans = {
 
     const renommer = document.createElement("button");
     renommer.type = "button";
-    renommer.title = "Renommer";
+    renommer.title = I18n.t("commun.renommer");
     renommer.textContent = "✎";
     renommer.addEventListener("click", async (evenement) => {
       evenement.stopPropagation();
-      const nouveauNom = prompt("Nouveau nom du plan :", plan.nom);
+      const nouveauNom = prompt(I18n.t("plans.renommer_prompt"), plan.nom);
       if (!nouveauNom) return;
       await Plans.renommer(plan, nouveauNom.trim());
       this._rafraichir();
@@ -85,11 +85,11 @@ const SelecteurPlans = {
 
     const supprimer = document.createElement("button");
     supprimer.type = "button";
-    supprimer.title = "Supprimer";
-    supprimer.textContent = "🗑";
+    supprimer.title = I18n.t("commun.supprimer");
+    supprimer.innerHTML = '<img class="icone-supprimer" src="icones/ui/supprimer.svg" alt="">';
     supprimer.addEventListener("click", async (evenement) => {
       evenement.stopPropagation();
-      if (!confirm(`Supprimer définitivement le plan "${plan.nom}" ?`)) return;
+      if (!confirm(I18n.t("plans.supprimer_confirm", { nom: plan.nom }))) return;
       await Plans.supprimer(plan);
       this._rafraichir();
     });
@@ -99,8 +99,8 @@ const SelecteurPlans = {
   },
 
   _creerPlan() {
-    const nom = prompt("Nom du nouveau plan :", "Nouveau plan");
+    const nom = prompt(I18n.t("plans.nouveau_nom_prompt"), I18n.t("plans.nouveau_nom_defaut"));
     if (nom === null) return;
-    this.callback({ nouveau: true, nom: nom.trim() || "Nouveau plan" });
+    this.callback({ nouveau: true, nom: nom.trim() || I18n.t("plans.nouveau_nom_defaut") });
   }
 };

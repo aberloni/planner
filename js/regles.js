@@ -13,13 +13,28 @@ const Regles = {
     this.canvasV = canvasVerticale;
     this.ctxH = canvasHorizontale.getContext("2d");
     this.ctxV = canvasVerticale.getContext("2d");
-    window.addEventListener("resize", () => this.redessiner());
+    this.redimensionner();
+    window.addEventListener("resize", () => this.redimensionner());
   },
 
-  redessiner() {
+  // Re-mesure les canvas puis redessine — à appeler explicitement quand la
+  // zone de travail passe de caché à visible (ex. fermeture de l'écran de
+  // choix de plan) : clientWidth/Height valaient 0 tant qu'elle était en
+  // `display:none`, donc le redimensionnement fait à l'init() était inutile
+  // et restait faux jusqu'au prochain resize fenêtre.
+  redimensionner() {
     this._redimensionnerCanvas(this.canvasH);
     this._redimensionnerCanvas(this.canvasV);
+    this.redessiner();
+  },
 
+  // Redessine sans re-mesurer/redimensionner les canvas : appelé à chaque
+  // pan/zoom (Viewport.alChangement), donc très fréquemment — resize
+  // (lecture clientWidth/Height + écriture canvas.width/height) force un
+  // reflow synchrone et vide le buffer à chaque appel, ce qui faisait ramer
+  // le pan. Le redimensionnement réel n'a lieu qu'à l'init et au resize
+  // fenêtre (seuls moments où la taille du canvas change vraiment).
+  redessiner() {
     if (!Viewport.largeurPlan || !Echelle.pxParCm) {
       this.ctxH.clearRect(0, 0, this.canvasH.width, this.canvasH.height);
       this.ctxV.clearRect(0, 0, this.canvasV.width, this.canvasV.height);

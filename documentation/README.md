@@ -33,20 +33,20 @@ contient toute la réflexion et la conception avant tout code.
     type
 16. [Modes édition / nettoyage](15-modes.md) — bouton bas droite, meubles
     vs masques d'habillage
-17. [Utilisateurs](16-utilisateurs.md) — propositions multiples, plan et
-    habillage partagés, meubles propres à chacun
+17. [Propositions](16-propositions.md) — agencements multiples, blueprint et
+    habillage partagés, meubles propres à chacune
 18. [Catalogue d'objets](17-catalogue.md) — objets nommés partagés,
     réutilisables sans recréation, grandit au fil de l'eau
 19. [Export PNG](19-export-png.md) — cadre redimensionnable en pointillé,
     export de la zone délimitée
-20. [Sessions](20-sessions.md) — écran de choix au démarrage, localStorage
-    en local ou `sessions/*.json` (via PHP) en mode servi
+20. [Plans](20-plans.md) — écran de choix au démarrage, localStorage
+    en local ou `plans/*.json` (via PHP) en mode servi
 
 ## Contraintes à retenir en toute circonstance
 
 - Tourne en local, pas de Docker, pas de webserver à administrer, pas de
   Python.
-- Le plan est une image (JPG/PNG) figée — pas d'édition des murs.
+- Le blueprint est une image (JPG/PNG) figée — pas d'édition des murs.
 - MVP = placer / déplacer / pivoter des meubles rectangulaires sur le plan
   importé (+ redimensionner, sauvegarder/charger, undo/redo — voir
   [02-perimetre-mvp.md](02-perimetre-mvp.md) pour le détail exact).

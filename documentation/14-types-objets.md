@@ -10,9 +10,9 @@ si d'autres catégories d'objets apparaissent (ex. des formes du calque
 
 ## `planner.conf.js`
 
-Fichier de configuration statique, à la racine du projet, qui liste les
+Fichier de configuration statique, dans `js/`, qui liste les
 types disponibles. C'est un fichier **JS** (pas JSON) chargé via
-`<script src="planner.conf.js">`, pour rester compatible avec l'ouverture
+`<script src="js/planner.conf.js">`, pour rester compatible avec l'ouverture
 directe en `file://` sans serveur — `fetch()` d'un fichier JSON local est
 bloqué par CORS dans Chrome en `file://` (voir
 [01-architecture-technique.md](01-architecture-technique.md) et

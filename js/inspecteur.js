@@ -1,11 +1,11 @@
 // Inspecteur (coin haut droit) : propriétés de l'objet sélectionné (meuble
 // ou masque d'habillage), en deux groupes — voir index.html/#inspecteur :
 // - "Prefab (catalogue)" : type, modèle, dimensions, hauteur réelle. Partagé
-//   entre utilisateurs, en LECTURE SEULE ici — se modifie uniquement depuis
+//   entre propositions, en LECTURE SEULE ici — se modifie uniquement depuis
 //   la vue d'édition du catalogue (bouton dédié, voir boutonOuvrirCatalogue).
 // - "Cette instance" : nom, forme, position (lecture seule), rotation
 //   (lecture seule), ordre d'affichage. Propre à cet exemplaire posé par
-//   l'utilisateur actif — éditable ici.
+//   la proposition active — éditable ici.
 const Inspecteur = {
 
   panneau: null,
@@ -82,6 +82,7 @@ const Inspecteur = {
     document.addEventListener("keydown", (evenement) => {
       const cible = evenement.target;
       if (cible instanceof HTMLInputElement || cible instanceof HTMLTextAreaElement || cible instanceof HTMLSelectElement) return;
+      if (typeof Mesure !== "undefined" && Mesure.actif) return; // mesure en cours : UI verrouillée (voir js/mesure.js)
       if (!this.objetCourant) return;
 
       if (evenement.key === "Delete" || evenement.key === "Backspace") {

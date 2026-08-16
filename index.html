@@ -2,54 +2,59 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Planner de meubles</title>
+<title>Planner</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="choix-plan">
 
 <div id="vue-plans">
   <div id="vue-plans-panneau">
-    <h1>Plans</h1>
+    <h1 data-i18n="plans.titre">Plans</h1>
     <div id="plans-grille"></div>
-    <button id="plan-nouveau" class="plan-carte plan-carte-nouveau" type="button">+ Nouveau plan</button>
+    <button id="plan-nouveau" class="plan-carte plan-carte-nouveau" type="button" data-i18n="plans.nouveau_bouton">+ Nouveau plan</button>
   </div>
 </div>
 
 <div id="sidebar-plans-fond"></div>
 <div id="sidebar-plans">
   <div id="sidebar-plans-entete">
-    <h2>Plans</h2>
-    <button id="sidebar-plans-fermer" title="Fermer">✕</button>
+    <h2 data-i18n="plans.titre">Plans</h2>
+    <button id="sidebar-plans-fermer" title="Fermer" data-i18n-title="commun.fermer">✕</button>
   </div>
   <div id="sidebar-plans-liste"></div>
-  <button id="sidebar-plans-nouveau" type="button">+ Nouveau plan</button>
+  <button id="sidebar-plans-nouveau" type="button" data-i18n="plans.nouveau_bouton">+ Nouveau plan</button>
 </div>
 
 <div id="barre-outils">
   <div class="barre-groupe barre-gauche">
-    <button id="btn-changer-plan" title="Changer de plan"><img class="barre-icone" src="icones/ui/plans.svg" alt=""></button>
-    <span id="label-plan-actuel" title="Plan en cours"></span>
+    <button id="btn-changer-plan" title="Changer de plan" data-i18n-title="barre.changer_plan_title"><img class="barre-icone" src="icones/ui/plans.svg" alt=""></button>
+    <span id="label-plan-actuel" title="Plan en cours" data-i18n-title="barre.plan_actuel_title"></span>
     <span class="separateur"></span>
-    <button id="btn-importer-blueprint" title="Importer un blueprint"><img class="barre-icone" src="icones/ui/blueprint.svg" alt=""></button>
-    <button id="btn-echelle" title="Définir l'échelle du blueprint"><img class="barre-icone" src="icones/ui/echelle.svg" alt=""></button>
-    <span id="label-echelle" title="Échelle actuelle"></span>
-    <button id="btn-origine" title="Définir l'origine du blueprint (0,0 des règles/grille)"><img class="barre-icone" src="icones/ui/origine.svg" alt=""></button>
-    <span id="label-origine" title="Origine actuelle"></span>
+    <button id="btn-importer-blueprint" title="Importer un blueprint" data-i18n-title="barre.importer_blueprint_title"><img class="barre-icone" src="icones/ui/blueprint.svg" alt=""></button>
+    <button id="btn-mode" title="Mode édition"></button>
+    <button id="btn-langue" title="Changer de langue / Switch language" data-i18n-title="langue.bouton_title" type="button"><img class="barre-icone" id="btn-langue-icone" src="icones/ui/drapeau-fr.svg" alt=""></button>
+  </div>
+  <span class="separateur-section"></span>
+  <div class="barre-groupe barre-centre">
+    <button id="btn-echelle" title="Définir l'échelle du blueprint" data-i18n-title="barre.echelle_title"><img class="barre-icone" src="icones/ui/echelle.svg" alt=""></button>
+    <span id="label-echelle" title="Échelle actuelle" data-i18n-title="barre.echelle_actuelle_title"></span>
+    <button id="btn-origine" title="Définir l'origine du blueprint (0,0 des règles/grille)" data-i18n-title="barre.origine_title"><img class="barre-icone" src="icones/ui/origine.svg" alt=""></button>
+    <span id="label-origine" title="Origine actuelle" data-i18n-title="barre.origine_actuelle_title"></span>
   </div>
   <span class="separateur-section"></span>
   <div class="barre-groupe barre-droite">
-    <span id="label-proposition-active" title="Proposition active"></span>
+    <span id="label-proposition-active" title="Proposition active" data-i18n-title="barre.proposition_active_title"></span>
     <div class="menu-conteneur">
-      <button id="btn-menu-proposition" title="Plan et propositions"><img class="barre-icone" src="icones/ui/menu-proposition.svg" alt=""></button>
+      <button id="btn-menu-proposition" title="Plan et propositions" data-i18n-title="barre.menu_proposition_title"><img class="barre-icone" src="icones/ui/menu-proposition.svg" alt=""></button>
       <div id="menu-proposition" class="menu-deroulant">
-        <button id="btn-renommer-proposition"><img class="barre-icone" src="icones/ui/renommer-proposition.svg" alt="">Renommer la proposition active</button>
-        <button id="btn-supprimer-proposition"><img class="barre-icone" src="icones/ui/supprimer-proposition.svg" alt="">Supprimer la proposition active</button>
+        <button id="btn-renommer-proposition"><img class="barre-icone" src="icones/ui/renommer-proposition.svg" alt=""><span data-i18n="menu.renommer_proposition">Renommer la proposition active</span></button>
+        <button id="btn-supprimer-proposition"><img class="barre-icone" src="icones/ui/supprimer-proposition.svg" alt=""><span data-i18n="menu.supprimer_proposition">Supprimer la proposition active</span></button>
         <hr class="menu-separateur">
-        <button id="btn-ajouter-proposition"><img class="barre-icone" src="icones/ui/ajouter-proposition.svg" alt="">Ajouter une proposition</button>
+        <button id="btn-ajouter-proposition"><img class="barre-icone" src="icones/ui/ajouter-proposition.svg" alt=""><span data-i18n="menu.ajouter_proposition">Ajouter une proposition</span></button>
         <div id="menu-proposition-liste"></div>
         <hr class="menu-separateur">
-        <button id="btn-ouvrir-projet"><img class="barre-icone" src="icones/ui/ouvrir.svg" alt="">Ouvrir un projet...</button>
-        <button id="btn-exporter-projet"><img class="barre-icone" src="icones/ui/enregistrer.svg" alt="">Enregistrer sous...</button>
+        <button id="btn-ouvrir-projet"><img class="barre-icone" src="icones/ui/ouvrir.svg" alt=""><span data-i18n="menu.ouvrir_projet">Ouvrir un projet...</span></button>
+        <button id="btn-exporter-projet"><img class="barre-icone" src="icones/ui/enregistrer.svg" alt=""><span data-i18n="menu.exporter_projet">Enregistrer sous...</span></button>
       </div>
     </div>
   </div>
@@ -61,88 +66,87 @@
   <canvas id="regle-verticale"></canvas>
   <div id="zone-travail">
     <div id="message-accueil">
-      <p>Aucun blueprint importé.</p>
-      <p>Cliquez sur "Importer un blueprint" (JPG/PNG) dans la barre d'outils.</p>
+      <p data-i18n="accueil.aucun_blueprint">Aucun blueprint importé.</p>
+      <p data-i18n="accueil.instruction">Cliquez sur "Importer un blueprint" (JPG/PNG) dans la barre d'outils.</p>
     </div>
     <svg id="viewport" xmlns="http://www.w3.org/2000/svg"></svg>
     <canvas id="grille-canvas"></canvas>
     <div id="echelle-visuelle">
+      <div id="echelle-visuelle-labels"></div>
       <div id="echelle-visuelle-barre"></div>
-      <div id="echelle-visuelle-labels"><span>0</span><span></span></div>
     </div>
     <span id="statut" class="statut"></span>
     <div id="controles-zoom">
-      <button id="btn-zoom-moins" title="Zoom arrière">-</button>
-      <button id="btn-zoom-100" title="Réinitialiser le zoom à 100%">100%</button>
-      <button id="btn-zoom-plus" title="Zoom avant">+</button>
+      <button id="btn-zoom-moins" title="Zoom arrière" data-i18n-title="zoom.arriere_title">-</button>
+      <button id="btn-zoom-100" title="Réinitialiser le zoom à 100%" data-i18n-title="zoom.reinitialiser_title">100%</button>
+      <button id="btn-zoom-plus" title="Zoom avant" data-i18n-title="zoom.avant_title">+</button>
       <span class="separateur"></span>
-      <button id="btn-cadrer" title="Cadrer le plan dans la fenêtre">⛶</button>
+      <button id="btn-cadrer" title="Cadrer le plan dans la fenêtre" data-i18n-title="zoom.cadrer_title">⛶</button>
     </div>
-    <button id="btn-ajouter-meuble" title="Ajouter un meuble">+</button>
-    <button id="btn-dupliquer" title="Dupliquer l'objet sélectionné">⧉</button>
+    <button id="btn-ajouter-meuble" class="bouton-rond" title="Ajouter un meuble">+</button>
+    <button id="btn-dupliquer" class="bouton-rond" title="Dupliquer l'objet sélectionné" data-i18n-title="objets.dupliquer_title">⧉</button>
     <div id="panneau-catalogue">
       <div id="catalogue-liste"></div>
-      <button id="btn-nouveau-modele">+ Nouvel objet...</button>
+      <button id="btn-nouveau-modele" data-i18n="catalogue.nouveau_objet">+ Nouvel objet...</button>
     </div>
-    <button id="btn-mode" title="Mode édition"></button>
-    <button id="btn-editer-catalogue" title="Éditer le catalogue"><img class="barre-icone" src="icones/ui/catalogue.svg" alt=""></button>
-    <button id="btn-exporter-png" title="Exporter le plan en PNG (cadre en pointillé)"><img class="barre-icone" src="icones/ui/appareil-photo.svg" alt=""></button>
-    <button id="btn-grille" title="Afficher/masquer la grille"><img class="barre-icone" src="icones/ui/grille.svg" alt=""></button>
-    <button id="btn-mesurer" title="Mesurer une distance sur le plan"><img class="barre-icone" src="icones/ui/mesurer.svg" alt=""></button>
+    <button id="btn-editer-catalogue" class="bouton-rond" title="Éditer le catalogue" data-i18n-title="catalogue.editer_catalogue_title"><img class="barre-icone" src="icones/ui/catalogue.svg" alt=""></button>
+    <button id="btn-exporter-png" class="bouton-rond" title="Exporter le plan en PNG (cadre en pointillé)" data-i18n-title="app.exporter_png_title"><img class="barre-icone" src="icones/ui/appareil-photo.svg" alt=""></button>
+    <button id="btn-grille" class="bouton-rond" title="Afficher la grille" data-i18n-title="app.grille_title_inactif"><img class="barre-icone" src="icones/ui/grille.svg" alt=""></button>
+    <button id="btn-mesurer" class="bouton-rond" title="Mesurer une distance sur le plan" data-i18n-title="objets.mesurer_title"><img class="barre-icone" src="icones/ui/mesurer.svg" alt=""></button>
     <div id="inspecteur">
       <div class="insp-section" id="insp-section-prefab">
-        <div class="insp-section-titre" title="Partagé par toutes les propositions, modifiable depuis la vue d'édition du catalogue">Prefab (catalogue)</div>
+        <div class="insp-section-titre" title="Partagé par toutes les propositions, modifiable depuis la vue d'édition du catalogue" data-i18n-title="inspecteur.prefab_partage_title" data-i18n="inspecteur.prefab_titre">Prefab (catalogue)</div>
         <div class="insp-lecture-seule" id="insp-ligne-type">
-          Type : <span id="insp-type">-</span>
+          <span data-i18n="inspecteur.type_label">Type :</span> <span id="insp-type">-</span>
         </div>
         <div class="insp-lecture-seule" id="insp-ligne-modele">
-          Modèle : <span id="insp-modele">-</span>
+          <span data-i18n="inspecteur.modele_label">Modèle :</span> <span id="insp-modele">-</span>
         </div>
         <div class="insp-lecture-seule">
-          Largeur : <span id="insp-largeur">-</span> cm
+          <span data-i18n="inspecteur.largeur_label">Largeur :</span> <span id="insp-largeur">-</span> cm
         </div>
         <div class="insp-lecture-seule">
-          Profondeur : <span id="insp-profondeur">-</span> cm
+          <span data-i18n="inspecteur.profondeur_label">Profondeur :</span> <span id="insp-profondeur">-</span> cm
         </div>
         <div class="insp-lecture-seule" id="insp-ligne-hauteur-cm">
-          Hauteur réelle : <span id="insp-hauteur-cm">-</span> cm
+          <span data-i18n="inspecteur.hauteur_reelle_label">Hauteur réelle :</span> <span id="insp-hauteur-cm">-</span> cm
         </div>
-        <button id="insp-ouvrir-catalogue" type="button">Éditer dans le catalogue</button>
+        <button id="insp-ouvrir-catalogue" type="button" data-i18n="inspecteur.editer_dans_catalogue">Éditer dans le catalogue</button>
       </div>
 
       <hr class="insp-separateur">
 
       <div class="insp-section" id="insp-section-instance">
-        <div class="insp-section-titre" title="Propre à cet exemplaire posé, pour la proposition active uniquement">Cette instance</div>
+        <div class="insp-section-titre" title="Propre à cet exemplaire posé, pour la proposition active uniquement" data-i18n-title="inspecteur.instance_partage_title" data-i18n="inspecteur.cette_instance_titre">Cette instance</div>
         <label>
-          Nom (instance)
+          <span data-i18n="inspecteur.nom_label">Nom (instance)</span>
           <input type="text" id="insp-nom">
         </label>
         <label>
-          Forme
+          <span data-i18n="inspecteur.forme_label">Forme</span>
           <select id="insp-forme">
-            <option value="rectangle">Rectangle</option>
-            <option value="cercle">Cercle</option>
-            <option value="capsule">Capsule</option>
+            <option value="rectangle" data-i18n="inspecteur.forme_rectangle">Rectangle</option>
+            <option value="cercle" data-i18n="inspecteur.forme_cercle">Cercle</option>
+            <option value="capsule" data-i18n="inspecteur.forme_capsule">Capsule</option>
           </select>
         </label>
         <div class="insp-lecture-seule">
-          Position : <span id="insp-position">-</span>
+          <span data-i18n="inspecteur.position_label">Position :</span> <span id="insp-position">-</span>
         </div>
         <div class="insp-lecture-seule">
-          Rotation : <span id="insp-rotation">-</span>
+          <span data-i18n="inspecteur.rotation_label">Rotation :</span> <span id="insp-rotation">-</span>
         </div>
         <details class="insp-foldout">
-          <summary>Ordre d'affichage</summary>
+          <summary data-i18n="inspecteur.ordre_affichage">Ordre d'affichage</summary>
           <select id="insp-z-ordre">
-            <option value="bas">Arrière-plan</option>
-            <option value="normal" selected>Normal</option>
-            <option value="haut">Premier plan</option>
+            <option value="bas" data-i18n="inspecteur.arriere_plan">Arrière-plan</option>
+            <option value="normal" selected data-i18n="inspecteur.normal">Normal</option>
+            <option value="haut" data-i18n="inspecteur.premier_plan">Premier plan</option>
           </select>
         </details>
       </div>
 
-      <button id="insp-supprimer" class="insp-danger">Supprimer</button>
+      <button id="insp-supprimer" class="insp-danger" data-i18n="commun.supprimer">Supprimer</button>
     </div>
   </div>
 </div>
@@ -151,32 +155,33 @@
   <div id="vue-catalogue-panneau">
     <div id="vue-catalogue-entete">
       <div id="vue-catalogue-titre-actions">
-        <h2>Catalogue</h2>
-        <button id="vue-catalogue-importer" title="Importer un catalogue (CSV)..."><img class="barre-icone" src="icones/ui/importer.svg" alt=""></button>
-        <button id="vue-catalogue-exporter" title="Exporter le catalogue (CSV)..."><img class="barre-icone" src="icones/ui/exporter.svg" alt=""></button>
-        <button id="vue-catalogue-imprimer" title="Imprimer le détail du catalogue"><img class="barre-icone" src="icones/ui/imprimer.svg" alt=""></button>
+        <h2 data-i18n="catalogue_vue.titre">Catalogue</h2>
+        <button id="vue-catalogue-importer" title="Importer un catalogue (CSV)..." data-i18n-title="catalogue_vue.importer_title"><img class="barre-icone" src="icones/ui/importer.svg" alt=""></button>
+        <button id="vue-catalogue-exporter" title="Exporter le catalogue (CSV)..." data-i18n-title="catalogue_vue.exporter_title"><img class="barre-icone" src="icones/ui/exporter.svg" alt=""></button>
+        <button id="vue-catalogue-imprimer" title="Imprimer le détail du catalogue" data-i18n-title="catalogue_vue.imprimer_title"><img class="barre-icone" src="icones/ui/imprimer.svg" alt=""></button>
       </div>
-      <button id="vue-catalogue-fermer" title="Fermer">✕</button>
+      <button id="vue-catalogue-fermer" title="Fermer" data-i18n-title="commun.fermer">✕</button>
     </div>
     <div id="vue-catalogue-corps">
       <table id="vue-catalogue-table">
         <thead>
           <tr>
-            <th>Nom</th>
-            <th>Type</th>
-            <th>Largeur (cm)</th>
-            <th>Profondeur (cm)</th>
-            <th>Hauteur (cm)</th>
-            <th>Qté</th>
-            <th title="Objet à déménager (compté dans le volume total)">À déménager</th>
-            <th>Volume</th>
+            <th data-i18n="catalogue_vue.th_nom">Nom</th>
+            <th data-i18n="catalogue_vue.th_description">Description</th>
+            <th data-i18n="catalogue_vue.th_type">Type</th>
+            <th data-i18n="catalogue_vue.th_largeur">Largeur (cm)</th>
+            <th data-i18n="catalogue_vue.th_profondeur">Profondeur (cm)</th>
+            <th data-i18n="catalogue_vue.th_hauteur">Hauteur (cm)</th>
+            <th data-i18n="catalogue_vue.th_qte">Qté</th>
+            <th title="Objet à déménager (compté dans le volume total)" data-i18n-title="catalogue_vue.th_a_demenager_title" data-i18n="catalogue_vue.th_a_demenager">À déménager</th>
+            <th data-i18n="catalogue_vue.th_volume">Volume</th>
             <th></th>
           </tr>
         </thead>
         <tbody id="vue-catalogue-tbody"></tbody>
       </table>
     </div>
-    <button id="vue-catalogue-nouveau">+ Nouvel objet...</button>
+    <button id="vue-catalogue-nouveau" data-i18n="catalogue.nouveau_objet">+ Nouvel objet...</button>
   </div>
 </div>
 
@@ -189,7 +194,9 @@
 <input type="file" id="input-fichier-catalogue" accept="text/csv,.csv" hidden>
 
 <script src="js/version.js"></script>
-<script src="planner.conf.js"></script>
+<script src="js/traductions.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/planner.conf.js"></script>
 <script src="js/blueprint.js"></script>
 <script src="js/viewport.js"></script>
 <script src="js/statut.js"></script>
@@ -210,6 +217,7 @@
 <script src="js/inspecteur.js"></script>
 <script src="js/stockage.js"></script>
 <script src="js/plans.js"></script>
+<script src="js/catalogue-stockage.js"></script>
 <script src="js/selecteur-plans.js"></script>
 <script src="js/sidebar-plans.js"></script>
 <script src="js/app.js"></script>

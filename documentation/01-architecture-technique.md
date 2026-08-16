@@ -12,8 +12,8 @@ navigateur via `file://`. Aucune installation nécessaire, pas de Python, pas
 de processus serveur à maintenir.
 
 L'app peut aussi être déposée telle quelle sur un hébergement statique
-classique (http/https) — voir [20-sessions.md](20-sessions.md) pour ce que
-ça change côté choix de session (seul cas où un peu de PHP entre en jeu,
+classique (http/https) — voir [20-plans.md](20-plans.md) pour ce que
+ça change côté choix de plan (seul cas où un peu de PHP entre en jeu,
 uniquement pour lister des fichiers).
 
 ## Pourquoi pas de framework (React/Vue) pour le MVP
@@ -77,29 +77,44 @@ support mobile/tactile requis pour le MVP (souris + clavier uniquement).
 ```
 planner/
 ├── index.html
-├── planner.conf.js          # config statique : types d'objets (voir 14-types-objets.md)
 ├── css/
 │   └── style.css
 ├── js/
 │   ├── app.js                 # point d'entrée, orchestration
-│   ├── plan.js                 # lecture du fichier image importé
+│   ├── version.js               # numéro de version affiché en filigrane
+│   ├── planner.conf.js          # config statique : types d'objets (voir 14-types-objets.md)
+│   ├── blueprint.js             # lecture du fichier image importé
 │   ├── viewport.js             # SVG racine : viewBox, zoom, pan, calques
 │   ├── statut.js               # zone de statut de la barre d'outils
-│   ├── echelle.js              # calibration de l'échelle du plan
+│   ├── echelle.js              # calibration de l'échelle du blueprint
+│   ├── echelle-visuelle.js      # gizmo façon carte, bas de viewport (voir 11)
 │   ├── regles.js               # règles graduées X/Y
+│   ├── grille.js                # grille graduée + accroche meubles (voir 11)
+│   ├── origine.js               # point de référence (0,0) réglable (voir 11)
+│   ├── mesure.js                # outil "Mesurer" une distance (voir 11)
 │   ├── objets.js               # fabrique commune : sélection/drag/resize/rotation
 │   ├── meubles.js               # instance typée de la fabrique (voir 14-types-objets.md)
 │   ├── habillage.js             # instance de masquage de la fabrique (voir 15-modes.md)
-│   ├── catalogue.js             # catalogue partagé d'objets nommés (voir 17-catalogue.md)
-│   ├── utilisateurs.js          # profils utilisateurs (voir 16-utilisateurs.md)
+│   ├── cadre-export.js          # cadre d'export PNG (voir 19-export-png.md)
+│   ├── catalogue.js             # catalogue GLOBAL d'objets nommés, partagé par tous les plans (voir 17-catalogue.md)
+│   ├── edition-catalogue.js      # vue dédiée d'édition du catalogue
+│   ├── propositions.js          # agencements multiples (voir 16-propositions.md)
 │   ├── mode.js                  # bascule édition / nettoyage (voir 15-modes.md)
 │   ├── inspecteur.js            # panneau de propriétés de l'objet sélectionné
 │   ├── stockage.js               # localStorage, filet de sécurité (voir 03)
-│   ├── sessions.js               # couche de données du choix de session (voir 20-sessions.md)
-│   └── selecteur-sessions.js     # écran d'accueil, choix de session
-├── sessions/
-│   ├── liste.php                # découverte des sessions en mode "servi" (voir 20-sessions.md)
-│   └── *.json                   # sessions elles-mêmes (déposées manuellement)
+│   ├── plans.js                  # couche de données du choix de plan (voir 20-plans.md)
+│   ├── catalogue-stockage.js     # persistance du catalogue global, distincte de plans.js (voir 20-plans.md)
+│   ├── selecteur-plans.js        # écran d'accueil, choix de plan
+│   └── sidebar-plans.js          # sidebar de changement/gestion de plan
+├── plans/
+│   ├── liste.php                 # découverte des plans en mode "servi" (voir 20-plans.md)
+│   ├── sauvegarder.php           # écrit un plan
+│   ├── renommer.php              # renomme un plan
+│   ├── supprimer.php             # supprime un plan
+│   └── *.json                    # plans eux-mêmes (déposés manuellement)
+├── catalogue/
+│   ├── sauvegarder.php           # écrit le catalogue global (voir 20-plans.md) — dossier séparé de plans/, pour ne pas être ramassé par plans/liste.php
+│   └── catalogue.json            # le catalogue global lui-même
 └── documentation/
     └── *.md
 ```
