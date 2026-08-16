@@ -1,0 +1,121 @@
+// Barre latérale (ancrée à gauche, pleine hauteur) pour changer de plan
+// sans revenir à l'écran d'accueil (voir js/selecteur-plans.js pour cet
+// écran, même couche de données via js/plans.js).
+const SidebarPlans = {
+
+  liste: null,
+  boutonNouveau: null,
+  idActuel: null,
+  callbackChoix: null,
+  callbackNouveau: null,
+  callbackRenommer: null,
+
+  init(elements) {
+    this.liste = elements.liste;
+    this.boutonNouveau = elements.boutonNouveau;
+    this.boutonNouveau.addEventListener("click", () => this._creerPlan());
+  },
+
+  alChoix(callback) {
+    this.callbackChoix = callback;
+  },
+
+  alNouveau(callback) {
+    this.callbackNouveau = callback;
+  },
+
+  // callback(plan, nouveauNom) appelé après un renommage réussi, pour que
+  // l'appelant puisse mettre à jour son propre libellé si c'est le plan en
+  // cours qui a été renommé.
+  alRenommer(callback) {
+    this.callbackRenommer = callback;
+  },
+
+  async rafraichir(idActuel) {
+    this.idActuel = idActuel;
+    this._rendre(await Plans.lister());
+  },
+
+  _rendre(liste) {
+    this.liste.innerHTML = "";
+    if (!liste.length) {
+      const vide = document.createElement("div");
+      vide.className = "sidebar-plans-vide";
+      vide.textContent = "Aucun plan pour l'instant.";
+      this.liste.appendChild(vide);
+      return;
+    }
+    liste.forEach((plan) => this.liste.appendChild(this._item(plan)));
+  },
+
+  _item(plan) {
+    const actif = plan.id === this.idActuel;
+
+    const item = document.createElement("div");
+    item.className = "sidebar-plan-item" + (actif ? " actif" : "");
+
+    const nom = document.createElement("div");
+    nom.className = "sidebar-plan-nom";
+    nom.textContent = plan.nom;
+    item.appendChild(nom);
+
+    if (plan.modifie) {
+      const date = document.createElement("div");
+      date.className = "sidebar-plan-date";
+      date.textContent = new Date(plan.modifie).toLocaleString("fr-FR");
+      item.appendChild(date);
+    }
+
+    if (!actif) {
+      item.addEventListener("click", () => this.callbackChoix(plan));
+    }
+    item.appendChild(this._actions(plan));
+
+    return item;
+  },
+
+  _actions(plan) {
+    const actions = document.createElement("div");
+    actions.className = "sidebar-plan-actions";
+
+    const renommer = document.createElement("button");
+    renommer.type = "button";
+    renommer.title = "Renommer";
+    renommer.textContent = "✎";
+    renommer.addEventListener("click", async (evenement) => {
+      evenement.stopPropagation();
+      const nouveauNom = prompt("Nouveau nom du plan :", plan.nom);
+      if (!nouveauNom) return;
+      const nom = nouveauNom.trim();
+      await Plans.renommer(plan, nom);
+      if (this.callbackRenommer) this.callbackRenommer(plan, nom);
+      this.rafraichir(this.idActuel);
+    });
+    actions.appendChild(renommer);
+
+    const supprimer = document.createElement("button");
+    supprimer.type = "button";
+    supprimer.title = "Supprimer";
+    supprimer.textContent = "🗑";
+    supprimer.addEventListener("click", async (evenement) => {
+      evenement.stopPropagation();
+      if (!confirm(`Supprimer définitivement le plan "${plan.nom}" ?`)) return;
+      await Plans.supprimer(plan);
+      if (plan.id === this.idActuel) {
+        // Le plan ouvert vient d'être supprimé : retour à l'écran de choix.
+        location.reload();
+        return;
+      }
+      this.rafraichir(this.idActuel);
+    });
+    actions.appendChild(supprimer);
+
+    return actions;
+  },
+
+  _creerPlan() {
+    const nom = prompt("Nom du nouveau plan :", "Nouveau plan");
+    if (nom === null) return;
+    this.callbackNouveau(nom.trim() || "Nouveau plan");
+  }
+};

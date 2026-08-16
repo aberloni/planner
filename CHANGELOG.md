@@ -1,0 +1,90 @@
+# Changelog
+
+## 2026-08-16
+- Gizmo d'échelle visuelle (`js/echelle-visuelle.js`) : barre noir/blanc alternée façon carte, fixe en bas au centre du viewport, 5 segments d'1m, largeur adaptée au zoom courant.
+- Changement de session : cadrage du viewport reproduit sur la session suivante (origine au même endroit de l'écran, mêmes cm réels affichés) au lieu de recentrer/dézoomer par défaut — utile quand les sessions sont les étages d'un même lieu. Premier chargement (rien à reproduire) : vue d'ensemble via l'algo du bouton "Cadrer" au lieu d'un recentrage 100% arbitraire.
+- Icônes changées : bouton "Changer de session" → pictogramme sidebar (`mdi:page-layout-sidebar-left`) ; menu "Session et utilisateurs" → profil (`mdi:account-circle-outline`) au lieu du kebab, plus adapté au menu de compte qu'il est devenu.
+- Échap ou Espace quitte le mode "Mesurer" ; Échap désélectionne l'objet sélectionné (meuble/masque).
+- "Ouvrir un projet..."/"Enregistrer sous..." déplacés de la barre d'outils vers le menu kebab (renommé "Session et utilisateurs"), regroupé en 3 sections séparées par un trait : utilisateur actif, liste des utilisateurs, session.
+- Outil "Mesurer" : message d'activation raccourci ("cliquez sur le plan pour mesurer") au lieu de détailler les deux façons de mesurer.
+- Fix : colonne Volume de la vue catalogue (ligne et total) en `white-space: nowrap` — évitait un retour à la ligne du total.
+- Outil "Mesurer" : la distance s'affiche en direct dans le statut pendant le cliquer-glisser, pas seulement au relâchement.
+- Icônes emoji import/export du catalogue (vue d'édition) remplacées par des SVG (`icones/ui/importer.svg`, `exporter.svg`).
+- Nouveau bouton "Mesurer" (bas droite du viewport) : mesure une distance entre deux points du plan (deux clics, ou cliquer-glisser) et affiche le résultat en cm/m dans le statut, sans rien poser sur le plan.
+
+- Flèches clavier : déplace l'objet sélectionné (meuble/masque) de 5 cm dans la direction correspondante ; Ctrl+←/→ le fait pivoter par pas de 45° (mêmes paliers que la poignée de rotation).
+- Boutons "Échelle" et "Origine" : icône dédiée (`icones/ui/echelle.svg`, `origine.svg`) + valeur actuelle affichée dans un label séparé en lecture seule à côté, au lieu du texte dans le bouton.
+- Au démarrage, l'app rouvre directement la dernière session utilisée (bypass de l'écran de choix) si elle existe encore — mémorisée à chaque sauvegarde réussie.
+- Nouveau bouton "Origine" (barre d'outils, à côté d'"Échelle") : clic sur le plan pour recaler le point (0,0) des règles/de la grille et l'aimantation, sans toucher au fond/aux meubles — matérialisé par une croix bleue ; défaut = coin de l'image tant que non défini.
+- Nouvelle sidebar (ancrée à gauche, pleine hauteur) pour changer de session sans revenir à l'écran d'accueil ni recharger la page — ouverte via le bouton "Changer de session" de la barre d'outils.
+- Nom de la session en cours affiché dans la barre d'outils, à côté du bouton "Changer de session".
+- Fix : double-clic sur un objet posé (meuble/masque) ne déclenche plus le zoom du plan — le double-clic zoom ne réagit plus qu'en cliquant sur le fond/viewport.
+
+- "Importer un plan" quand un plan est déjà chargé ne remplace plus que l'image de fond — échelle, meubles, habillage, catalogue, utilisateurs et cadre d'export restent inchangés (le reset complet ne s'applique plus qu'au tout premier import d'une session).
+- Retrait des icônes de "catégorie" (Plan, Projet et catalogue, Utilisateurs) dans la barre d'outils, devenues redondantes avec les icônes des boutons eux-mêmes.
+- Déplacement d'un meuble/masque : aimantation du centre sur le croisement de grille le plus proche, quand la grille est active.
+- Fix : bouton "Cadrer" (⛶) — padding vertical inégal (le SVG centre toujours sur sa boîte complète, pas sur l'espace dégagé entre les contrôles de zoom en haut et les boutons ronds en bas) — décalage du centrage pour compenser.
+- Fix : grille cantonnée au coin haut-gauche (300x150, taille intrinsèque par défaut d'un `<canvas>`, non étirée par `inset:0` seul car élément remplacé) — `width`/`height: 100%` ajoutés.
+- Bouton "Grille" : clic cycle désactivée -> 2 cellules par unité de mesure -> 4 cellules -> désactivée.
+- Nouveau bouton "Grille" (bas droite du viewport) : affiche/masque une grille alignée sur les règles et l'échelle du plan, avec une graduation intermédiaire (2 cellules par unité de mesure).
+- Icône "Éditer le catalogue" changée pour un livre ouvert (`mdi:book-open-variant`).
+- Fix : bouton "Cadrer" (⛶) ne dézoomait pas sur l'axe non contraignant (viewBox pas mise au ratio du conteneur, letterboxing invisible au lieu d'un vrai dézoom) — la vue cadrée matche maintenant le ratio de la zone de travail sur les deux axes.
+- Icônes emoji des boutons ronds en bas à droite (Mode édition/nettoyage, Éditer le catalogue) remplacées par des SVG Iconify (`icones/ui/mode-edition.svg`, `mode-nettoyage.svg`, `catalogue.svg`).
+- Fix : export PNG en mode Décor excluait les meubles (calque masqué par un `display:none` inline hérité du mode courant, copié tel quel dans le clone SVG exporté).
+- Export PNG : plus de prompt de confirmation, capture et téléchargement directs au clic (nom = horodatage).
+- Export PNG : nom de fichier par défaut = horodatage (AAAA-MM-JJ_HHmmss) au lieu de l'uid du projet.
+- Bouton "Exporter en PNG" : icône remplacée par un appareil photo, déplacé de la barre d'outils vers les boutons ronds en bas à droite du viewport (avec Mode et Éditer le catalogue).
+- Bouton "Imprimer le catalogue" déplacé de la barre d'outils vers l'en-tête de la vue d'édition du catalogue.
+- Export/import du catalogue en CSV (colonnes id/nom/type/largeur_cm/profondeur_cm/hauteur_cm/a_demenager) au lieu de JSON, pour édition facile dans un tableur — la session/le projet reste en JSON.
+- Icônes emoji de la barre d'outils remplacées par des SVG Iconify (`icones/ui/`) : sessions, plan, dossier, ouvrir, enregistrer, imprimer, image, utilisateur, menu utilisateur, ajouter/supprimer utilisateur.
+- Regroupement de toute la gestion des utilisateurs (ajouter/renommer/supprimer + changer d'utilisateur) dans le menu kebab "⋮" de la barre d'outils : label lecture seule pour l'utilisateur actif, liste explicite des utilisateurs sous un séparateur pour basculer entre eux.
+
+## 2026-08-15
+- Boutons import/export du catalogue déplacés de la barre d'outils vers l'en-tête de la vue d'édition du catalogue.
+- Icônes emoji de la barre d'outils remplacées par des SVG Iconify (`icones/ui/`) : sessions, plan, dossier, ouvrir, enregistrer, imprimer, image, utilisateur, ajouter/supprimer utilisateur.
+- Ajout d'un écran de choix de session au démarrage (aucune restauration automatique) : sessions stockées dans `localStorage` en ouverture `file://` (CRUD complet : créer/renommer/supprimer), ou dans `sessions/*.json` via de petits scripts PHP (`sessions/liste.php`, `sauvegarder.php`, `renommer.php`, `supprimer.php`) quand l'app est servie en ligne — voir `documentation/20-sessions.md`.
+- Retrait du mécanisme de sauvegarde serveur mono-session (`serveur.py`, `js/serveur.js`, routes `/api/session`), remplacé par le système de sessions ci-dessus. Suppression de toute dépendance à Python (l'app n'en a plus besoin, même en option).
+- Bouton "📑" dans la barre d'outils pour revenir à l'écran de choix de session à tout moment.
+- Retrait des poignées de redimensionnement sur le plan : la taille dépend du prefab, se change uniquement depuis le catalogue (ou l'inspecteur, en lecture/écriture vers le catalogue).
+- Ajout d'un bouton pour supprimer l'utilisateur actif (avec confirmation) — refuse de supprimer le dernier utilisateur restant.
+- Export projet/catalogue : nom de fichier par défaut préfixé (`session_`/`catalog_`) pour distinguer les deux au premier coup d'œil.
+- Retrait du type "À déménager" (redondant avec la case à cocher "à déménager" du prefab, voir `Meuble.aDemenager`) et de son icône.
+- "Éditer dans le catalogue" (inspecteur) fait défiler jusqu'à la ligne du prefab concerné et la surligne brièvement dans la vue catalogue.
+- Ajout d'un type d'objet "Loisir" dans `planner.conf.js` (piano, TV...).
+- Renommage du type "nouveau" -> "a_acheter" (id/fichier icône alignés sur le libellé "À acheter") — casse la compatibilité des plans déjà sauvegardés avec l'ancien id (retombent sur "Générique" au chargement).
+- Ajout d'un type d'objet "À déménager" dans `planner.conf.js`.
+- Inspecteur : type, modèle, largeur, profondeur et hauteur réelle passent en lecture seule (ces champs sont ceux du prefab, partagé — plus d'édition locale qui masquait cette réalité) ; bouton "Éditer dans le catalogue" ajouté pour y accéder directement.
+- Catalogue : créer un nouvel objet (bouton "+" du panneau rapide) ne le place plus automatiquement sur le plan — ouvre directement la vue d'édition du catalogue pour le configurer (type/dimensions/hauteur), puisque l'inspecteur ne permet plus de le faire après coup.
+- Inspecteur : regroupé en deux sections séparées par un trait horizontal — "Prefab (catalogue)" (type, modèle, dimensions, hauteur réelle — partagé) et "Cette instance" (nom, forme, position, rotation, ordre d'affichage — propre à l'utilisateur actif).
+- Ajout d'un utilisateur : demande (si l'utilisateur actif a déjà des meubles posés) de dupliquer sa disposition (positions incluses, nouveaux id) ou de partir d'un plan vide. Les prefabs du catalogue restent partagés dans les deux cas.
+- Fix : redimensionner via la poignée de coin (drag sur le plan) ne synchronisait pas la taille vers le prefab du catalogue (seul le champ largeur/profondeur de l'inspecteur le faisait) — d'où un fallback 100×100 figé pour les utilisateurs sans instance posée de ce modèle.
+- Raccourci clavier Suppr/Retour arrière : supprime l'instance sélectionnée sur le plan (comme le bouton "Supprimer" de l'inspecteur), sauf si le focus est dans un champ de saisie.
+- Impression du catalogue : mêmes lignes triées par type que la vue d'édition.
+- Vue catalogue : lignes triées par type (libellé croissant), puis par nom du prefab.
+- Inspecteur : le type n'est plus modifiable ici (lecture seule, "Type : {libellé}") — désormais lié au modèle du catalogue dont l'objet a été posé, à changer depuis la vue d'édition du catalogue.
+- Inspecteur : ligne "Modèle : {nom du prefab}" (lecture seule) au-dessus du nom d'une instance posée depuis le catalogue, pour rendre visible la distinction nom du prefab / nom de l'instance. Champ "Nom" relabellé "Nom (instance)".
+- Types d'objets : lien fort et obligatoire avec leur icône (`icones/<id>.svg`), plus de champ `emoji`/repli emoji dans `planner.conf.js` — ajout des icônes manquantes pour "À acheter" et "Volume fixe".
+- Nom du prefab (catalogue) et nom de l'instance posée sont désormais distincts : le catalogue édite/affiche toujours le nom du modèle, une instance posée depuis un modèle reçoit par défaut un nom auto-incrémenté ("Chaise 1", "Chaise 2"...), éditable individuellement dans l'inspecteur sans plus jamais renommer le modèle.
+- Catalogue (vue d'édition + impression) : case à cocher "À déménager" par objet — décochée, l'objet est exclu du volume total (utile pour un objet à acheter sur place ou un volume fixe déjà en place, ex. comptoir de cuisine).
+- Catalogue (vue d'édition + impression) : colonne "Qté" (nombre d'instances posées partageant le même modèle, ex. via duplicata), volume de la ligne = volume unitaire × quantité.
+- Ajout de deux types d'objets : "À acheter" (nouveaux objets à acheter sur place) et "Volume fixe" (volumes non déménagés, ex. comptoir de cuisine).
+- Inspecteur et vue catalogue partagent désormais le même code pour remplir le dropdown de type (`PlannerConf.remplirSelectTypes`).
+- Fix : catalogue (panneau, vue d'édition, impression) utilise maintenant les icônes SVG des types au lieu des emojis.
+- Fix : bouton "Cadrer" ne dézoomait pas assez sur l'axe contraint (padding autour du cadre trop faible pour être visible sur cet axe) — padding augmenté à 20%.
+- Infobulle au survol d'un objet : nom complet en plus des dimensions, sur deux lignes.
+- Survol d'un objet sur le plan : infobulle affichant ses dimensions (largeur x profondeur, cm).
+- Bouton "Cadrer" recadre désormais sur le cadre d'export PNG (centré, avec un petit padding autour) au lieu du plan entier.
+- Bouton "Cadrer" déplacé dans le gizmo de zoom (icône ⛶) au lieu de la barre d'outils.
+- Barre d'outils : séparateurs verticaux entre les 3 sections, icône caractéristique (🗺️/📁/👤) illustrant chaque section.
+- Ajout d'icônes SVG (dossier `icones/`) pour tous les types d'objets existants (générique, lit, table, chaise, canapé, armoire, bureau, vitrine, buffet), en plus de l'électroménager.
+- Ajout d'un champ optionnel `icone` (SVG dans `icones/`) sur les types d'objets, affiché à la place de l'emoji quand présent — repli automatique sur l'emoji sinon. Icône SVG ajoutée pour le type "Électroménager".
+- Ajout d'un type d'objet "Électroménager" dans `planner.conf.js`.
+- Ajout d'un système de versioning (X.Y, voir `version.md`) et d'un filigrane discret affichant la version en bas à droite.
+- Label des meubles : la police se réduit d'abord avant de tronquer le nom, largeur disponible basée sur l'orientation réelle du meuble (plus seulement le plus petit côté).
+- Nouvelle vue dédiée pour éditer le catalogue (nom, type, dimensions, hauteur), ouverte via une icône en bas à droite.
+- Catalogue : ajout et suppression de modèles indépendants d'un plan ouvert.
+- Fix : renommer/redimensionner un meuble posé ne mettait pas à jour le modèle du catalogue (nom/dimensions figés à la création), d'où le décalage avec l'inspecteur.
+- Fix : la vue catalogue lit/écrit désormais directement l'instance posée sur le plan (comme l'inspecteur) au lieu d'une copie du modèle, pour rester toujours à jour quel que soit le chemin de modification (drag, inspecteur, etc.).
+- Ajout d'une colonne volume (m³) par objet dans l'impression du catalogue.
+- Ajout du total des volumes en bas de tableau à l'impression.
+- Le message de statut (bulle en haut du viewport) disparaît en fondu après 2 secondes.

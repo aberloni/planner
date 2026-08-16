@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Planner de meubles</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="choix-plan">
+
+<div id="vue-plans">
+  <div id="vue-plans-panneau">
+    <h1>Plans</h1>
+    <div id="plans-grille"></div>
+    <button id="plan-nouveau" class="plan-carte plan-carte-nouveau" type="button">+ Nouveau plan</button>
+  </div>
+</div>
+
+<div id="sidebar-plans-fond"></div>
+<div id="sidebar-plans">
+  <div id="sidebar-plans-entete">
+    <h2>Plans</h2>
+    <button id="sidebar-plans-fermer" title="Fermer">✕</button>
+  </div>
+  <div id="sidebar-plans-liste"></div>
+  <button id="sidebar-plans-nouveau" type="button">+ Nouveau plan</button>
+</div>
+
+<div id="barre-outils">
+  <div class="barre-groupe barre-gauche">
+    <button id="btn-changer-plan" title="Changer de plan"><img class="barre-icone" src="icones/ui/plans.svg" alt=""></button>
+    <span id="label-plan-actuel" title="Plan en cours"></span>
+    <span class="separateur"></span>
+    <button id="btn-importer-blueprint" title="Importer un blueprint"><img class="barre-icone" src="icones/ui/blueprint.svg" alt=""></button>
+    <button id="btn-echelle" title="Définir l'échelle du blueprint"><img class="barre-icone" src="icones/ui/echelle.svg" alt=""></button>
+    <span id="label-echelle" title="Échelle actuelle"></span>
+    <button id="btn-origine" title="Définir l'origine du blueprint (0,0 des règles/grille)"><img class="barre-icone" src="icones/ui/origine.svg" alt=""></button>
+    <span id="label-origine" title="Origine actuelle"></span>
+  </div>
+  <span class="separateur-section"></span>
+  <div class="barre-groupe barre-droite">
+    <span id="label-proposition-active" title="Proposition active"></span>
+    <div class="menu-conteneur">
+      <button id="btn-menu-proposition" title="Plan et propositions"><img class="barre-icone" src="icones/ui/menu-proposition.svg" alt=""></button>
+      <div id="menu-proposition" class="menu-deroulant">
+        <button id="btn-renommer-proposition"><img class="barre-icone" src="icones/ui/renommer-proposition.svg" alt="">Renommer la proposition active</button>
+        <button id="btn-supprimer-proposition"><img class="barre-icone" src="icones/ui/supprimer-proposition.svg" alt="">Supprimer la proposition active</button>
+        <hr class="menu-separateur">
+        <button id="btn-ajouter-proposition"><img class="barre-icone" src="icones/ui/ajouter-proposition.svg" alt="">Ajouter une proposition</button>
+        <div id="menu-proposition-liste"></div>
+        <hr class="menu-separateur">
+        <button id="btn-ouvrir-projet"><img class="barre-icone" src="icones/ui/ouvrir.svg" alt="">Ouvrir un projet...</button>
+        <button id="btn-exporter-projet"><img class="barre-icone" src="icones/ui/enregistrer.svg" alt="">Enregistrer sous...</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="grille-plan">
+  <div id="coin-regles"></div>
+  <canvas id="regle-horizontale"></canvas>
+  <canvas id="regle-verticale"></canvas>
+  <div id="zone-travail">
+    <div id="message-accueil">
+      <p>Aucun blueprint importé.</p>
+      <p>Cliquez sur "Importer un blueprint" (JPG/PNG) dans la barre d'outils.</p>
+    </div>
+    <svg id="viewport" xmlns="http://www.w3.org/2000/svg"></svg>
+    <canvas id="grille-canvas"></canvas>
+    <div id="echelle-visuelle">
+      <div id="echelle-visuelle-barre"></div>
+      <div id="echelle-visuelle-labels"><span>0</span><span></span></div>
+    </div>
+    <span id="statut" class="statut"></span>
+    <div id="controles-zoom">
+      <button id="btn-zoom-moins" title="Zoom arrière">-</button>
+      <button id="btn-zoom-100" title="Réinitialiser le zoom à 100%">100%</button>
+      <button id="btn-zoom-plus" title="Zoom avant">+</button>
+      <span class="separateur"></span>
+      <button id="btn-cadrer" title="Cadrer le plan dans la fenêtre">⛶</button>
+    </div>
+    <button id="btn-ajouter-meuble" title="Ajouter un meuble">+</button>
+    <button id="btn-dupliquer" title="Dupliquer l'objet sélectionné">⧉</button>
+    <div id="panneau-catalogue">
+      <div id="catalogue-liste"></div>
+      <button id="btn-nouveau-modele">+ Nouvel objet...</button>
+    </div>
+    <button id="btn-mode" title="Mode édition"></button>
+    <button id="btn-editer-catalogue" title="Éditer le catalogue"><img class="barre-icone" src="icones/ui/catalogue.svg" alt=""></button>
+    <button id="btn-exporter-png" title="Exporter le plan en PNG (cadre en pointillé)"><img class="barre-icone" src="icones/ui/appareil-photo.svg" alt=""></button>
+    <button id="btn-grille" title="Afficher/masquer la grille"><img class="barre-icone" src="icones/ui/grille.svg" alt=""></button>
+    <button id="btn-mesurer" title="Mesurer une distance sur le plan"><img class="barre-icone" src="icones/ui/mesurer.svg" alt=""></button>
+    <div id="inspecteur">
+      <div class="insp-section" id="insp-section-prefab">
+        <div class="insp-section-titre" title="Partagé par toutes les propositions, modifiable depuis la vue d'édition du catalogue">Prefab (catalogue)</div>
+        <div class="insp-lecture-seule" id="insp-ligne-type">
+          Type : <span id="insp-type">-</span>
+        </div>
+        <div class="insp-lecture-seule" id="insp-ligne-modele">
+          Modèle : <span id="insp-modele">-</span>
+        </div>
+        <div class="insp-lecture-seule">
+          Largeur : <span id="insp-largeur">-</span> cm
+        </div>
+        <div class="insp-lecture-seule">
+          Profondeur : <span id="insp-profondeur">-</span> cm
+        </div>
+        <div class="insp-lecture-seule" id="insp-ligne-hauteur-cm">
+          Hauteur réelle : <span id="insp-hauteur-cm">-</span> cm
+        </div>
+        <button id="insp-ouvrir-catalogue" type="button">Éditer dans le catalogue</button>
+      </div>
+
+      <hr class="insp-separateur">
+
+      <div class="insp-section" id="insp-section-instance">
+        <div class="insp-section-titre" title="Propre à cet exemplaire posé, pour la proposition active uniquement">Cette instance</div>
+        <label>
+          Nom (instance)
+          <input type="text" id="insp-nom">
+        </label>
+        <label>
+          Forme
+          <select id="insp-forme">
+            <option value="rectangle">Rectangle</option>
+            <option value="cercle">Cercle</option>
+            <option value="capsule">Capsule</option>
+          </select>
+        </label>
+        <div class="insp-lecture-seule">
+          Position : <span id="insp-position">-</span>
+        </div>
+        <div class="insp-lecture-seule">
+          Rotation : <span id="insp-rotation">-</span>
+        </div>
+        <details class="insp-foldout">
+          <summary>Ordre d'affichage</summary>
+          <select id="insp-z-ordre">
+            <option value="bas">Arrière-plan</option>
+            <option value="normal" selected>Normal</option>
+            <option value="haut">Premier plan</option>
+          </select>
+        </details>
+      </div>
+
+      <button id="insp-supprimer" class="insp-danger">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<div id="vue-catalogue">
+  <div id="vue-catalogue-panneau">
+    <div id="vue-catalogue-entete">
+      <div id="vue-catalogue-titre-actions">
+        <h2>Catalogue</h2>
+        <button id="vue-catalogue-importer" title="Importer un catalogue (CSV)..."><img class="barre-icone" src="icones/ui/importer.svg" alt=""></button>
+        <button id="vue-catalogue-exporter" title="Exporter le catalogue (CSV)..."><img class="barre-icone" src="icones/ui/exporter.svg" alt=""></button>
+        <button id="vue-catalogue-imprimer" title="Imprimer le détail du catalogue"><img class="barre-icone" src="icones/ui/imprimer.svg" alt=""></button>
+      </div>
+      <button id="vue-catalogue-fermer" title="Fermer">✕</button>
+    </div>
+    <div id="vue-catalogue-corps">
+      <table id="vue-catalogue-table">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Type</th>
+            <th>Largeur (cm)</th>
+            <th>Profondeur (cm)</th>
+            <th>Hauteur (cm)</th>
+            <th>Qté</th>
+            <th title="Objet à déménager (compté dans le volume total)">À déménager</th>
+            <th>Volume</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="vue-catalogue-tbody"></tbody>
+      </table>
+    </div>
+    <button id="vue-catalogue-nouveau">+ Nouvel objet...</button>
+  </div>
+</div>
+
+<div id="impression-catalogue"></div>
+
+<span id="filigrane-version"></span>
+
+<input type="file" id="input-fichier-blueprint" accept="image/png,image/jpeg" hidden>
+<input type="file" id="input-fichier-projet" accept="application/json,.json" hidden>
+<input type="file" id="input-fichier-catalogue" accept="text/csv,.csv" hidden>
+
+<script src="js/version.js"></script>
+<script src="planner.conf.js"></script>
+<script src="js/blueprint.js"></script>
+<script src="js/viewport.js"></script>
+<script src="js/statut.js"></script>
+<script src="js/echelle.js"></script>
+<script src="js/echelle-visuelle.js"></script>
+<script src="js/mesure.js"></script>
+<script src="js/origine.js"></script>
+<script src="js/regles.js"></script>
+<script src="js/grille.js"></script>
+<script src="js/objets.js"></script>
+<script src="js/cadre-export.js"></script>
+<script src="js/meubles.js"></script>
+<script src="js/habillage.js"></script>
+<script src="js/catalogue.js"></script>
+<script src="js/edition-catalogue.js"></script>
+<script src="js/propositions.js"></script>
+<script src="js/mode.js"></script>
+<script src="js/inspecteur.js"></script>
+<script src="js/stockage.js"></script>
+<script src="js/plans.js"></script>
+<script src="js/selecteur-plans.js"></script>
+<script src="js/sidebar-plans.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
