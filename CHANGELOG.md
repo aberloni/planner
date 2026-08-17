@@ -1,6 +1,12 @@
 # Changelog
 
 ## 2026-08-17
+- Sidebar des plans : nombre d'éléments placés (proposition active) affiché à côté du nom de chaque plan.
+- Fix : nouvel objet (meuble ou masque) placé au centre géométrique du viewBox, qui pouvait tomber sous les contrôles de zoom/boutons ronds flottants — placé maintenant au centre de la zone réellement visible.
+- Fix : impression du catalogue depuis l'écran de choix de plan (sans plan ouvert) affichait une liste vide — imprime maintenant tous les objets "Déménage" du catalogue (posés ou non, tous plans confondus), avec volumes et totaux.
+- Catalogue : nouveaux types "Bibliothèque" et "Rangement".
+- Catalogue : nouveau type "Commode".
+- Catalogue : nouveaux types "Placard" et "Étagère".
 - Vue catalogue : entête de l'onglet "À trier" en orange tant qu'il contient des objets.
 - Vue catalogue : onglets renommés "Déménage"/"Sur place" (ex "À déménager"/"Non déménagés") ; "À trier" inclut maintenant aussi les objets sans largeur/profondeur renseignées (pas seulement le type "Générique"), cohérent avec leur absence du panneau rapide.
 - Catalogue : largeur/profondeur vides par défaut à la création d'un objet (plus de 100×100 cm imposé). Invisible dans le panneau rapide (liste des objets posables) tant qu'elles ne sont pas renseignées ; la hauteur réelle reste facultative. Volume affiché seulement si les 3 (largeur/profondeur/hauteur) sont renseignées, vide sinon.

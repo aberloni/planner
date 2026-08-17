@@ -74,15 +74,15 @@ function creerModuleObjets(options) {
 
       const pxParCm = Echelle.pxParCm || Echelle.PX_PAR_CM_DEFAUT;
       const taille = this.TAILLE_DEFAUT_CM * pxParCm;
-      const vb = Viewport.viewBox;
+      const centre = Viewport.centreVisible();
 
       const objet = {
         id: crypto.randomUUID(),
         libelle: LIBELLE_DEFAUT,
         forme: "rectangle",
         zOrdre: "normal",
-        x: vb.x + vb.largeur / 2,
-        y: vb.y + vb.hauteur / 2,
+        x: centre.x,
+        y: centre.y,
         largeur: taille,
         hauteur: taille,
         rotation: 0
@@ -116,7 +116,7 @@ function creerModuleObjets(options) {
       // l'échelle du plan actif — dérivée au contexte, jamais stockée telle
       // quelle dans le catalogue.
       const pxParCm = Echelle.pxParCm || Echelle.PX_PAR_CM_DEFAUT;
-      const vb = Viewport.viewBox;
+      const centre = Viewport.centreVisible();
       const objet = {
         id: crypto.randomUUID(),
         modeleId: modele.id,
@@ -124,8 +124,8 @@ function creerModuleObjets(options) {
         type: modele.type,
         forme: modele.forme || "rectangle",
         zOrdre: "normal",
-        x: vb.x + vb.largeur / 2,
-        y: vb.y + vb.hauteur / 2,
+        x: centre.x,
+        y: centre.y,
         largeur: modele.largeur * pxParCm,
         hauteur: modele.hauteur * pxParCm,
         rotation: 0,

@@ -57,6 +57,18 @@ const SidebarPlans = {
     const nom = document.createElement("div");
     nom.className = "sidebar-plan-nom";
     nom.textContent = plan.nom;
+
+    // Nombre d'éléments placés sur CE plan, pour la proposition ACTIVE
+    // (voir js/propositions.js, meublesParPlan) — Propositions.liste est
+    // déjà en mémoire (projet ouvert avant d'atteindre la sidebar), pas
+    // besoin de recharger quoi que ce soit ici.
+    if (typeof Propositions !== "undefined" && Propositions.courante) {
+      const compte = document.createElement("span");
+      compte.className = "sidebar-plan-compte";
+      compte.textContent = (Propositions.courante.meublesParPlan[plan.id] || []).length;
+      nom.appendChild(compte);
+    }
+
     item.appendChild(nom);
 
     if (plan.modifie) {

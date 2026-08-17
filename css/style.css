@@ -1356,6 +1356,17 @@ body.sidebar-plans-ouverte #sidebar-plans {
   color: #1c7ed6;
 }
 
+.sidebar-plan-compte {
+  margin-left: 6px;
+  color: #adb5bd;
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.sidebar-plan-item.actif .sidebar-plan-compte {
+  color: #74c0fc;
+}
+
 .sidebar-plan-date {
   margin-top: 2px;
   color: #adb5bd;

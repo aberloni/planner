@@ -2,4 +2,4 @@
 // depuis `version.md` à la racine (source de référence) à chaque changement :
 // fetch() n'est pas fiable en ouverture directe file:// (voir
 // documentation.md, "Lancement en local"), donc pas de chargement dynamique.
-const VERSION = "1.142";
+const VERSION = "1.148";

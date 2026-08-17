@@ -226,6 +226,20 @@ const Viewport = {
     };
   },
 
+  // Centre (coordonnées viewBox) de la zone RÉELLEMENT visible à l'écran —
+  // pas le centre géométrique du viewBox, qui peut tomber sous le chrome
+  // flottant (#controles-zoom en haut, boutons ronds en bas, voir
+  // _zoneVerticaleDegagee) et donc apparaître caché aux yeux de
+  // l'utilisateur. Utilisé pour placer un nouvel objet bien en vue (voir
+  // js/objets.js, ajouter()/ajouterDepuisModele()).
+  centreVisible() {
+    const conteneur = this.svg.getBoundingClientRect();
+    const zone = this._zoneVerticaleDegagee(conteneur);
+    const xEcran = conteneur.left + conteneur.width / 2;
+    const yEcran = (zone.haut + zone.bas) / 2;
+    return this.versCoordonneesViewBox(xEcran, yEcran);
+  },
+
   // Convertit des coordonnées écran (pixels du navigateur) en coordonnées du viewBox.
   versCoordonneesViewBox(xEcran, yEcran) {
     const { rect, echelle, decalageX, decalageY } = this.zoneAffichage();

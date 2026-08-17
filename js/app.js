@@ -689,59 +689,61 @@
     lecteur.readAsText(fichier);
   }
 
-  // Imprime le détail du catalogue en cours (nom, type, dimensions en cm) :
-  // construit un tableau dans #impression-catalogue (masqué à l'écran,
-  // seul visible en @media print) puis déclenche window.print().
-  function imprimerCatalogue() {
-    if (Catalogue.liste.length === 0) {
+  // Imprime le catalogue "à déménager" (nom, type, dimensions en cm) : TOUS
+  // les objets de cette catégorie (voir EditionCatalogue._categorie), posés
+  // ou non — accessible depuis l'écran de choix de plan (aucun plan/aucune
+  // instance posée dans ce contexte), pas seulement depuis un plan ouvert.
+  // Construit un tableau dans #impression-catalogue (masqué à l'écran, seul
+  // visible en @media print) puis déclenche window.print().
+  async function imprimerCatalogue() {
+    const aDemenager = Catalogue.liste.filter((modele) => EditionCatalogue._categorie(modele) === "a_demenager");
+    if (aDemenager.length === 0) {
       alert(I18n.t("app.catalogue_vide_imprimer"));
       return;
     }
-    const pxParCm = Echelle.pxParCm || Echelle.PX_PAR_CM_DEFAUT;
+    // Quantité posée TOUS PLANS du projet confondus (voir panneau rapide,
+    // js/catalogue.js) — pas seulement le plan actif, souvent aucun ici.
+    await EditionCatalogue.rafraichirComptesTousPlans();
     const echapper = (texte) => String(texte).replace(/[&<>"']/g, (car) => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
     }[car]));
 
-    // N'imprime que les prefabs "à déménager", posés (quantite > 0) et avec
-    // une hauteur réelle renseignée (seuls ceux-là ont un volume) — inutile
-    // pour un déménagement de lister un objet acheté sur place, un volume
-    // fixe déjà en place, ou un prefab jamais posé.
     let volumeTotalM3 = 0;
     let nbLignes = 0;
-    const lignes = EditionCatalogue._listeTrieeParType().map((modele) => {
-      // Comme la vue d'édition du catalogue : si une instance est posée sur
-      // le plan de la proposition active, on imprime ses valeurs actuelles
-      // plutôt que la copie (potentiellement figée) du modèle.
-      // Dupliquer un meuble garde le même modeleId (voir objets.js,
-      // dupliquer()) : plusieurs instances peuvent partager un modèle,
-      // d'où la quantité et le volume total = volume unitaire × quantité.
-      const instances = EditionCatalogue._instancesPosees(modele.id);
-      const instance = instances[0] || null;
-      const quantite = instances.length;
-      const hauteurCm = instance ? instance.hauteurCm : modele.hauteurCm;
-      const typeId = instance ? instance.type : modele.type;
-      if (quantite === 0 || typeof hauteurCm !== "number" || !PlannerConf.estADemenager(typeId)) return "";
-
-      const nom = modele.nom; // nom du prefab — distinct du nom (auto-incrémenté) de chaque instance
-      // modele.largeur/hauteur sont déjà en cm ; une instance posée est en
-      // px (convertie selon l'échelle du plan actif) — voir js/catalogue.js.
-      const largeurCm = Math.round(instance ? instance.largeur / pxParCm : modele.largeur);
-      const profondeurCm = Math.round(instance ? instance.hauteur / pxParCm : modele.hauteur);
-      const volumeUnitaireM3 = (largeurCm * profondeurCm * hauteurCm) / 1e6;
-      const volumeTotalPrefabM3 = volumeUnitaireM3 * quantite;
-      volumeTotalM3 += volumeTotalPrefabM3;
-      nbLignes++;
-      const descriptionHtml = modele.description
-        ? `<div class="impression-catalogue-description">${echapper(modele.description)}</div>`
-        : "";
-      return `<tr>
-        <td>${PlannerConf.iconeHtml(typeId, "impression-catalogue-icone")} ${echapper(nom)}${descriptionHtml}</td>
-        <td>${largeurCm} × ${profondeurCm} × ${hauteurCm} cm</td>
-        <td>${quantite}</td>
-        <td>${volumeUnitaireM3.toFixed(2)} m³</td>
-        <td>${volumeTotalPrefabM3.toFixed(2)} m³</td>
-      </tr>`;
-    }).join("");
+    const lignes = EditionCatalogue._listeTrieeParType()
+      .filter((modele) => EditionCatalogue._categorie(modele) === "a_demenager")
+      .map((modele) => {
+        const quantite = EditionCatalogue.instancesTousPlans(modele.id);
+        // Toujours les dimensions du prefab (donnée canonique du catalogue,
+        // voir js/catalogue.js) — pas celles d'une instance en particulier,
+        // qui peut avoir été redimensionnée indépendamment sur un plan.
+        const dimensionsCompletes = typeof modele.largeur === "number" && typeof modele.hauteur === "number" && typeof modele.hauteurCm === "number";
+        nbLignes++;
+        const descriptionHtml = modele.description
+          ? `<div class="impression-catalogue-description">${echapper(modele.description)}</div>`
+          : "";
+        if (!dimensionsCompletes) {
+          return `<tr>
+            <td>${PlannerConf.iconeHtml(modele.type, "impression-catalogue-icone")} ${echapper(modele.nom)}${descriptionHtml}</td>
+            <td>-</td>
+            <td>${quantite}</td>
+            <td>-</td>
+            <td>-</td>
+          </tr>`;
+        }
+        const largeurCm = Math.round(modele.largeur);
+        const profondeurCm = Math.round(modele.hauteur);
+        const volumeUnitaireM3 = (modele.largeur * modele.hauteur * modele.hauteurCm) / 1e6;
+        const volumeTotalPrefabM3 = volumeUnitaireM3 * quantite;
+        volumeTotalM3 += volumeTotalPrefabM3;
+        return `<tr>
+          <td>${PlannerConf.iconeHtml(modele.type, "impression-catalogue-icone")} ${echapper(modele.nom)}${descriptionHtml}</td>
+          <td>${largeurCm} × ${profondeurCm} × ${modele.hauteurCm} cm</td>
+          <td>${quantite}</td>
+          <td>${volumeUnitaireM3.toFixed(2)} m³</td>
+          <td>${volumeTotalPrefabM3.toFixed(2)} m³</td>
+        </tr>`;
+      }).join("");
 
     impressionCatalogue.innerHTML = `
       <h1>${I18n.t("app.impression_titre", { id: echapper(Catalogue.id || "") })}</h1>
@@ -950,6 +952,10 @@
 
   function ouvrirSidebarPlans() {
     document.body.classList.add("sidebar-plans-ouverte");
+    // Synchronise le plan actif dans Propositions AVANT de rafraîchir la
+    // sidebar (voir js/sidebar-plans.js), sinon son compte d'éléments
+    // placés resterait celui de la dernière bascule, pas l'état courant.
+    Propositions.synchroniser();
     SidebarPlans.rafraichir(idPlanActuel());
   }
 
