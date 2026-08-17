@@ -20,19 +20,32 @@ const EditionCatalogue = {
   tbody: null,
   boutonFermer: null,
   boutonNouveau: null,
+  onglets: null, // NodeList des boutons d'onglet
+  ongletActif: "a_demenager", // "a_demenager" | "non_a_demenager"
 
   init(elements) {
     this.overlay = elements.overlay;
     this.tbody = elements.tbody;
     this.boutonFermer = elements.fermer;
     this.boutonNouveau = elements.nouveau;
+    this.onglets = elements.onglets;
 
     this.boutonFermer.addEventListener("click", () => this.masquer());
     this.overlay.addEventListener("pointerdown", (evenement) => {
       if (evenement.target === this.overlay) this.masquer();
     });
     this.boutonNouveau.addEventListener("click", () => {
-      if (Catalogue.creerVide()) this._rendre();
+      const modele = Catalogue.creerVide();
+      if (modele) this.afficher(modele.id); // rendu + surlignage temporaire, voir _mettreEnAvant
+    });
+
+    this.onglets.forEach((bouton) => {
+      bouton.addEventListener("click", () => {
+        if (bouton.dataset.onglet === this.ongletActif) return;
+        this.ongletActif = bouton.dataset.onglet;
+        this.onglets.forEach((b) => b.classList.toggle("vue-catalogue-onglet-actif", b === bouton));
+        this._rendre();
+      });
     });
 
     // Différé (`setTimeout(0)`) : un `change` de champ (ex. Tab pour passer
@@ -86,6 +99,18 @@ const EditionCatalogue = {
   // "Éditer dans le catalogue" de l'inspecteur, pour retrouver la bonne
   // ligne dans la liste (potentiellement longue) sans avoir à la chercher.
   afficher(modeleAMettreEnAvant) {
+    // Bascule sur l'onglet du prefab ciblé au besoin, sinon sa ligne n'existe
+    // pas dans le DOM (filtrée par l'autre onglet) — voir _mettreEnAvant.
+    if (modeleAMettreEnAvant) {
+      const modele = Catalogue.liste.find((m) => m.id === modeleAMettreEnAvant);
+      if (modele) {
+        const ongletCible = this._categorie(modele);
+        if (ongletCible !== this.ongletActif) {
+          this.ongletActif = ongletCible;
+          this.onglets.forEach((b) => b.classList.toggle("vue-catalogue-onglet-actif", b.dataset.onglet === ongletCible));
+        }
+      }
+    }
     this._rendre();
     this.overlay.classList.add("visible");
     if (modeleAMettreEnAvant) this._mettreEnAvant(modeleAMettreEnAvant);
@@ -110,7 +135,9 @@ const EditionCatalogue = {
 
   // Toutes les instances posées sur le plan de la proposition active pour ce
   // modèle (dupliquer un meuble garde le même modeleId — voir objets.js,
-  // dupliquer() — donc un modèle peut avoir plusieurs instances).
+  // dupliquer() — donc un modèle peut avoir plusieurs instances). Vide tant
+  // qu'aucun plan n'est ouvert (Meubles.liste pas encore chargée) : tout
+  // retombe alors sur le prefab.
   _instancesPosees(modeleId) {
     return Meubles.liste.filter((objet) => objet.modeleId === modeleId);
   },
@@ -137,23 +164,21 @@ const EditionCatalogue = {
     return this._comptesTousPlans.get(modeleId) || 0;
   },
 
-  // Parcourt tous les plans (via Plans.lister()/charger(), valable dans les
-  // deux modes — voir js/plans.js) pour compter les instances de chaque
-  // modèle, toutes propositions confondues. Asynchrone (MODE_FICHIERS fait
-  // un fetch par plan) : `callback` est appelé une fois le cache prêt, pour
-  // re-rendre les vues qui en dépendent avec des comptes à jour.
+  // Parcourt Propositions.liste (déjà en mémoire, propositions au niveau du
+  // projet — voir js/propositions.js) pour compter les instances de chaque
+  // modèle, tous plans/toutes propositions du projet confondus. `callback`
+  // est appelé une fois le cache prêt, pour re-rendre les vues qui en
+  // dépendent avec des comptes à jour.
   async rafraichirComptesTousPlans(callback) {
     const comptes = new Map();
-    const plans = await Plans.lister();
-    for (const entree of plans) {
-      const projet = await Plans.charger(entree);
-      (projet && projet.propositions || []).forEach((proposition) => {
-        (proposition.meubles || []).forEach((objet) => {
+    Propositions.liste.forEach((proposition) => {
+      Object.values(proposition.meublesParPlan || {}).forEach((meubles) => {
+        (meubles || []).forEach((objet) => {
           if (!objet.modeleId) return;
           comptes.set(objet.modeleId, (comptes.get(objet.modeleId) || 0) + 1);
         });
       });
-    }
+    });
     this._comptesTousPlans = comptes;
     if (callback) callback();
   },
@@ -169,15 +194,43 @@ const EditionCatalogue = {
     });
   },
 
+  // Onglet d'un modèle : "a_trier" (encore au type par défaut — voir
+  // PlannerConf.typeParDefaut — OU largeur/profondeur pas encore
+  // renseignées : pas encore complètement paramétré, priorité sur les deux
+  // autres — un objet pas dimensionné n'est de toute façon pas posable, voir
+  // js/catalogue.js), "a_demenager" ou "non_a_demenager" (Volume fixe). Une
+  // instance déjà posée a toujours une taille réelle : la vérification de
+  // dimensions ne s'applique qu'au prefab seul (pas encore placé).
+  _categorie(modele) {
+    const instance = this._instancePosee(modele.id);
+    const typeActuel = instance ? instance.type : (modele.type || PlannerConf.typeParDefaut);
+    const dimensionsManquantes = !instance && (typeof modele.largeur !== "number" || typeof modele.hauteur !== "number");
+    if (typeActuel === PlannerConf.typeParDefaut || dimensionsManquantes) return "a_trier";
+    return PlannerConf.estADemenager(typeActuel) ? "a_demenager" : "non_a_demenager";
+  },
+
   _rendre() {
     const pxParCm = Echelle.pxParCm || Echelle.PX_PAR_CM_DEFAUT;
     const focus = this._capturerFocus();
     this.tbody.innerHTML = "";
 
-    if (Catalogue.liste.length === 0) {
+    // Compte de chaque onglet, toujours à jour même si on n'affiche que
+    // celui actif — sert à distinguer "catalogue vide" de "rien dans cet
+    // onglet" (voir plus bas).
+    const listeTriee = this._listeTrieeParType();
+    const aDemenager = this.ongletActif === "a_demenager";
+    const filtree = listeTriee.filter((modele) => this._categorie(modele) === this.ongletActif);
+
+    // Entête de l'onglet "À trier" en orange tant qu'il reste des objets pas
+    // complètement paramétrés dedans — repérage immédiat, même depuis un
+    // autre onglet.
+    const resteATrier = listeTriee.some((modele) => this._categorie(modele) === "a_trier");
+    this.onglets.forEach((b) => b.classList.toggle("vue-catalogue-onglet-alerte", b.dataset.onglet === "a_trier" && resteATrier));
+
+    if (listeTriee.length === 0) {
       const tr = document.createElement("tr");
       const td = document.createElement("td");
-      td.colSpan = 10;
+      td.colSpan = 9;
       td.className = "vue-catalogue-vide";
       td.textContent = I18n.t("catalogue.aucun_objet");
       tr.appendChild(td);
@@ -185,41 +238,76 @@ const EditionCatalogue = {
       return;
     }
 
+    if (filtree.length === 0) {
+      const messages = {
+        a_trier: "catalogue_vue.onglet_a_trier_vide",
+        a_demenager: "catalogue_vue.onglet_a_demenager_vide",
+        non_a_demenager: "catalogue_vue.onglet_non_a_demenager_vide"
+      };
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 9;
+      td.className = "vue-catalogue-vide";
+      td.textContent = I18n.t(messages[this.ongletActif]);
+      tr.appendChild(td);
+      this.tbody.appendChild(tr);
+      this._restaurerFocus(focus);
+      return;
+    }
+
     let volumeTotalM3 = 0;
-    this._listeTrieeParType().forEach((modele) => {
+    filtree.forEach((modele) => {
       const instances = this._instancesPosees(modele.id);
       const instance = instances[0] || null;
       const quantite = instances.length;
-      const aDemenager = instance ? instance.aDemenager !== false : modele.aDemenager !== false;
       if (aDemenager) volumeTotalM3 += this._volumeM3(modele, instance, pxParCm) * quantite;
       this.tbody.appendChild(this._ligne(modele, instance, quantite, pxParCm));
     });
 
-    const trTotal = document.createElement("tr");
-    trTotal.className = "vue-catalogue-total";
-    const tdLabel = document.createElement("td");
-    tdLabel.colSpan = 8;
-    tdLabel.textContent = I18n.t("commun.total");
-    trTotal.appendChild(tdLabel);
-    const tdVolume = document.createElement("td");
-    tdVolume.className = "vue-catalogue-colonne-volume";
-    tdVolume.textContent = `${volumeTotalM3.toFixed(2)} m³`;
-    trTotal.appendChild(tdVolume);
-    trTotal.appendChild(document.createElement("td")); // Supprimer
-    this.tbody.appendChild(trTotal);
+    // Le volume total n'a de sens que pour l'onglet "à déménager" — les
+    // autres onglets ne contribuent jamais au volume à transporter.
+    if (aDemenager) {
+      const trTotal = document.createElement("tr");
+      trTotal.className = "vue-catalogue-total";
+      const tdLabel = document.createElement("td");
+      tdLabel.colSpan = 7;
+      tdLabel.textContent = I18n.t("commun.total");
+      trTotal.appendChild(tdLabel);
+      const tdVolume = document.createElement("td");
+      tdVolume.className = "vue-catalogue-colonne-volume";
+      tdVolume.textContent = `${volumeTotalM3.toFixed(2)} m³`;
+      trTotal.appendChild(tdVolume);
+      trTotal.appendChild(document.createElement("td")); // Supprimer
+      this.tbody.appendChild(trTotal);
+    }
 
     this._restaurerFocus(focus);
   },
 
   // `modele.largeur/hauteur` sont déjà en cm (donnée brute du catalogue,
   // voir js/catalogue.js) ; une instance posée est en px et se convertit
-  // selon l'échelle du plan actif.
+  // selon l'échelle du plan actif. 0 si un des trois critères manque (prefab
+  // pas encore complètement dimensionné) — voir _ligne pour l'affichage.
   _volumeM3(modele, instance, pxParCm) {
     const largeurCm = instance ? instance.largeur / pxParCm : modele.largeur;
     const profondeurCm = instance ? instance.hauteur / pxParCm : modele.hauteur;
     const hauteurCmActuelle = instance ? instance.hauteurCm : modele.hauteurCm;
-    if (typeof hauteurCmActuelle !== "number") return 0;
+    if (typeof largeurCm !== "number" || typeof profondeurCm !== "number" || typeof hauteurCmActuelle !== "number") return 0;
     return (largeurCm * profondeurCm * hauteurCmActuelle) / 1e6;
+  },
+
+  // Valeur (cm) -> texte du champ : vide si non renseignée (prefab pas
+  // encore dimensionné), sinon arrondie.
+  _formatCm(valeur) {
+    return typeof valeur === "number" ? Math.round(valeur) : "";
+  },
+
+  // Texte du champ -> valeur (cm) à stocker : null si vide (voir
+  // Catalogue.creerVide), sinon le nombre saisi (1 si invalide/négatif — un
+  // prefab en cours d'édition ne doit jamais retomber à une taille nulle).
+  _parserCm(texte) {
+    if (texte.trim() === "") return null;
+    return parseFloat(texte) || 1;
   },
 
   _ligne(modele, instance, quantite, pxParCm) {
@@ -282,12 +370,15 @@ const EditionCatalogue = {
     inputLargeur.type = "number";
     inputLargeur.min = "1";
     inputLargeur.step = "1";
-    inputLargeur.value = Math.round(largeurCmActuelle);
+    inputLargeur.value = this._formatCm(largeurCmActuelle);
     this._selectionnerAuFocus(inputLargeur);
     inputLargeur.addEventListener("change", () => {
-      const cm = parseFloat(inputLargeur.value) || 1;
-      if (instance) Meubles.redimensionner(instance, cm * pxParCm, instance.hauteur);
-      else Catalogue.modifier(modele.id, { largeur: cm });
+      if (instance) {
+        const cm = parseFloat(inputLargeur.value) || 1;
+        Meubles.redimensionner(instance, cm * pxParCm, instance.hauteur);
+      } else {
+        Catalogue.modifier(modele.id, { largeur: this._parserCm(inputLargeur.value) });
+      }
     });
     tr.appendChild(this._cellule(inputLargeur));
 
@@ -295,12 +386,15 @@ const EditionCatalogue = {
     inputProfondeur.type = "number";
     inputProfondeur.min = "1";
     inputProfondeur.step = "1";
-    inputProfondeur.value = Math.round(profondeurCmActuelle);
+    inputProfondeur.value = this._formatCm(profondeurCmActuelle);
     this._selectionnerAuFocus(inputProfondeur);
     inputProfondeur.addEventListener("change", () => {
-      const cm = parseFloat(inputProfondeur.value) || 1;
-      if (instance) Meubles.redimensionner(instance, instance.largeur, cm * pxParCm);
-      else Catalogue.modifier(modele.id, { hauteur: cm });
+      if (instance) {
+        const cm = parseFloat(inputProfondeur.value) || 1;
+        Meubles.redimensionner(instance, instance.largeur, cm * pxParCm);
+      } else {
+        Catalogue.modifier(modele.id, { hauteur: this._parserCm(inputProfondeur.value) });
+      }
     });
     tr.appendChild(this._cellule(inputProfondeur));
 
@@ -322,29 +416,14 @@ const EditionCatalogue = {
     spanQuantite.textContent = quantite;
     tr.appendChild(this._cellule(spanQuantite));
 
-    const aDemenagerActuel = instance ? instance.aDemenager !== false : modele.aDemenager !== false;
-    const inputADemenager = document.createElement("input");
-    inputADemenager.type = "checkbox";
-    inputADemenager.title = I18n.t("edition_catalogue.a_demenager_title");
-    inputADemenager.checked = aDemenagerActuel;
-    inputADemenager.addEventListener("change", () => {
-      if (instance) Meubles.definirADemenager(instance, inputADemenager.checked);
-      else Catalogue.modifier(modele.id, { aDemenager: inputADemenager.checked });
-    });
-    tr.appendChild(this._cellule(inputADemenager));
-
-    // Rien d'affiché tant qu'aucune instance n'est posée (quantite = 0) :
-    // pas de "0.00 m³" trompeur pour un prefab pas encore placé. "-" reste
-    // réservé au cas où une instance existe mais sans hauteur réelle
-    // renseignée (ou exclue du volume total via "à déménager").
+    // Volume (par exemplaire) dès que les 3 critères (largeur, profondeur,
+    // hauteur réelle) sont renseignés — vide sinon, quel que soit le nombre
+    // d'exemplaires déjà posés.
+    const dimensionsCompletes = typeof largeurCmActuelle === "number" && typeof profondeurCmActuelle === "number" && typeof hauteurCmActuelle === "number";
     const spanVolume = document.createElement("span");
-    if (quantite === 0) {
-      spanVolume.textContent = "";
-    } else {
-      spanVolume.textContent = (typeof hauteurCmActuelle === "number" && aDemenagerActuel)
-        ? `${(this._volumeM3(modele, instance, pxParCm) * quantite).toFixed(2)} m³`
-        : "-";
-    }
+    spanVolume.textContent = dimensionsCompletes
+      ? `${this._volumeM3(modele, instance, pxParCm).toFixed(2)} m³`
+      : "";
     tr.appendChild(this._cellule(spanVolume, "vue-catalogue-colonne-volume"));
 
     const boutonSupprimer = document.createElement("button");

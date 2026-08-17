@@ -93,7 +93,6 @@ function creerModuleObjets(options) {
         // l'affichage, juste stockée pour anticiper une évolution future
         // (ex. vue 3D — voir documentation/09-roadmap.md).
         objet.hauteurCm = null;
-        objet.aDemenager = true;
       }
 
       this.liste.splice(this._indexInsertion("normal"), 0, objet);
@@ -130,8 +129,7 @@ function creerModuleObjets(options) {
         largeur: modele.largeur * pxParCm,
         hauteur: modele.hauteur * pxParCm,
         rotation: 0,
-        hauteurCm: modele.hauteurCm ?? null, // hauteur réelle (verticale) — voir ajouter()
-        aDemenager: modele.aDemenager !== false
+        hauteurCm: modele.hauteurCm ?? null // hauteur réelle (verticale) — voir ajouter()
       };
 
       this.liste.splice(this._indexInsertion("normal"), 0, objet);
@@ -142,14 +140,16 @@ function creerModuleObjets(options) {
       this._notifier();
     },
 
-    // Nom par défaut d'une instance posée depuis un modèle : "{nom du
-    // modèle} {N}", N repartant du nombre d'instances déjà posées + 1 (donc
-    // "Chaise 1", "Chaise 2"...). Distinct du nom du modèle lui-même (le
+    // Nom par défaut d'une instance posée depuis un modèle : identique au nom
+    // du modèle tant qu'il n'y a aucune autre instance déjà posée (pas de
+    // numéro qui n'apporterait rien) ; sinon suffixe "(N)", N = nombre
+    // d'instances déjà posées + 1, pour les différencier (donc "Chaise",
+    // "Chaise (2)", "Chaise (3)"...). Distinct du nom du modèle lui-même (le
     // "prefab", affiché dans le catalogue et à l'ajout) — voir
     // documentation/17-catalogue.md.
     _prochainNomInstance(modele) {
       const existantes = this.liste.filter((o) => o.modeleId === modele.id).length;
-      return `${modele.nom} ${existantes + 1}`;
+      return existantes === 0 ? modele.nom : `${modele.nom} (${existantes + 1})`;
     },
 
     _creerElement(objet) {
@@ -375,20 +375,6 @@ function creerModuleObjets(options) {
       objet.hauteurCm = (cm === null || cm === "" || isNaN(cm)) ? null : cm;
       if (objet.modeleId) Catalogue.synchroniserHauteurCm(objet.modeleId, objet.hauteurCm);
       Statut.definir(I18n.t("objets.hauteur_reelle", { libelle: objet.libelle, valeur: objet.hauteurCm ?? I18n.t("objets.non_definie") }));
-      this._notifier();
-    },
-
-    // Si faux, l'objet n'est pas déménagé (acheté sur place, ou volume fixe
-    // type "comptoir de cuisine") : exclu du calcul de volume total (vue
-    // d'édition du catalogue + impression) sans avoir à changer ses
-    // dimensions. N'affecte ni le rendu ni la taille au sol. Défaut true
-    // (voir ajouter()/ajouterDepuisModele()). N'existe que pour les modules
-    // créés avec avecType.
-    definirADemenager(objet, aDemenager) {
-      if (!AVEC_TYPE) return;
-      objet.aDemenager = !!aDemenager;
-      if (objet.modeleId) Catalogue.synchroniserADemenager(objet.modeleId, objet.aDemenager);
-      Statut.definir(I18n.t("objets.a_demenager_statut", { libelle: objet.libelle, statut: objet.aDemenager ? I18n.t("objets.a_demenager_oui") : I18n.t("objets.a_demenager_non") }));
       this._notifier();
     },
 
@@ -716,32 +702,35 @@ function creerModuleObjets(options) {
     },
 
     // Reporte la nouvelle taille (cm) sur toutes les AUTRES instances déjà
-    // posées du même prefab, dans toutes les propositions du plan actif — le
-    // catalogue est partagé (voir js/catalogue.js), on attend donc que
-    // toutes ses instances restent cohérentes en taille. N'a d'effet que
-    // pour les modules avec prefab (objet.modeleId défini, donc Meubles).
+    // posées du même prefab, dans toutes les propositions ET tous les plans
+    // du projet — le catalogue est partagé (voir js/catalogue.js), on attend
+    // donc que toutes ses instances restent cohérentes en taille. N'a
+    // d'effet que pour les modules avec prefab (objet.modeleId défini, donc
+    // Meubles).
     _propagerTailleAuxAutresInstances(objet, largeurCm, hauteurCm) {
       if (typeof Propositions === "undefined") return;
       const pxParCm = Echelle.pxParCm || Echelle.PX_PAR_CM_DEFAUT;
       const largeurPx = largeurCm * pxParCm;
       const hauteurPx = hauteurCm * pxParCm;
 
-      // Proposition active : instances déjà affichées (DOM) — mise à jour
-      // visuelle immédiate.
+      // Proposition/plan actifs : instances déjà affichées (DOM) — mise à
+      // jour visuelle immédiate.
       this.liste.forEach((autre) => {
         if (autre === objet || autre.modeleId !== objet.modeleId) return;
         this._definirTaille(autre, largeurPx, hauteurPx);
       });
 
-      // Autres propositions du même plan : simples données tant qu'inactives
-      // (pas de DOM) — se redessineront à la bonne taille à la prochaine
-      // bascule (voir js/propositions.js, Meubles.charger()).
+      // Toutes les autres propositions/plans : simples données tant
+      // qu'inactifs (pas de DOM) — se redessineront à la bonne taille à la
+      // prochaine bascule (voir js/propositions.js, Meubles.charger()).
       Propositions.liste.forEach((proposition) => {
-        if (proposition === Propositions.courante) return;
-        (proposition.meubles || []).forEach((autre) => {
-          if (autre.modeleId !== objet.modeleId) return;
-          autre.largeur = largeurPx;
-          autre.hauteur = hauteurPx;
+        Object.entries(proposition.meublesParPlan || {}).forEach(([planId, meubles]) => {
+          if (proposition === Propositions.courante && planId === Propositions.planId) return;
+          meubles.forEach((autre) => {
+            if (autre.modeleId !== objet.modeleId) return;
+            autre.largeur = largeurPx;
+            autre.hauteur = hauteurPx;
+          });
         });
       });
     },

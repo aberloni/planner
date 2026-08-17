@@ -15,10 +15,22 @@ const PlannerConf = {
 
   typeParDefaut: "generique",
 
+  // Un objet de ce type est un volume déjà en place, jamais à déménager
+  // (ex. comptoir de cuisine) — remplace l'ancien booléen "à déménager" du
+  // prefab/de l'instance, désormais dérivé du type au lieu d'être stocké
+  // séparément (les deux ne pouvaient de toute façon pas diverger dans les
+  // faits — voir documentation/17-catalogue.md).
+  ID_TYPE_VOLUME_FIXE: "volume",
+
+  estADemenager(id) {
+    return id !== this.ID_TYPE_VOLUME_FIXE;
+  },
+
   typesObjets: [
     { id: "generique", libelle: "Générique", couleur: "#adb5bd" },
     { id: "lit", libelle: "Lit", couleur: "#a8dadc" },
     { id: "table", libelle: "Table", couleur: "#e9c46a" },
+    { id: "chevet", libelle: "Chevet", couleur: "#f6bd60" },
     { id: "chaise", libelle: "Chaise", couleur: "#f4a261" },
     { id: "canape", libelle: "Canapé", couleur: "#8ecae6" },
     { id: "armoire", libelle: "Armoire", couleur: "#b5838d" },

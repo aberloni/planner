@@ -37,8 +37,12 @@
   const btnGrille = document.getElementById("btn-grille");
   const btnMesurer = document.getElementById("btn-mesurer");
   const grilleCanvas = document.getElementById("grille-canvas");
+  const btnChangerProjet = document.getElementById("btn-changer-projet");
+  const labelProjetActuel = document.getElementById("label-projet-actuel");
   const btnChangerPlan = document.getElementById("btn-changer-plan");
   const labelPlanActuel = document.getElementById("label-plan-actuel");
+  const btnEditerCatalogueDepuisPlans = document.getElementById("btn-editer-catalogue-plans");
+  const labelVueCatalogueProjet = document.getElementById("vue-catalogue-projet");
   const sidebarPlansFond = document.getElementById("sidebar-plans-fond");
   const sidebarPlansFermer = document.getElementById("sidebar-plans-fermer");
   const sidebarPlansListe = document.getElementById("sidebar-plans-liste");
@@ -101,7 +105,8 @@
     overlay: document.getElementById("vue-catalogue"),
     tbody: document.getElementById("vue-catalogue-tbody"),
     fermer: document.getElementById("vue-catalogue-fermer"),
-    nouveau: document.getElementById("vue-catalogue-nouveau")
+    nouveau: document.getElementById("vue-catalogue-nouveau"),
+    onglets: document.querySelectorAll(".vue-catalogue-onglet")
   });
   Propositions.init({
     label: labelPropositionActive,
@@ -133,8 +138,9 @@
   Mode.alChangement(appliquerMode);
   appliquerMode(Mode.actuel); // synchronise l'état initial (pas d'événement au chargement)
 
-  let blueprintActuel = null; // { dataUrl, largeurPx, hauteurPx }
-  let projetId = null; // identifiant unique du projet courant, nom de fichier par défaut à l'export
+  let blueprintActuel = null; // { chemin, largeurPx, hauteurPx } — chemin RELATIF (imports/<projetId>/<nom>), jamais de contenu embarqué, voir js/blueprint.js
+  let projetId = null; // identifiant unique DU PLAN courant (nom de fichier par défaut à l'export) — pas à confondre avec projetActuel (le PROJET, voir js/projets.js)
+  let projetActuel = null; // projet en cours (voir js/projets.js) : { id, nom }, null avant tout choix
   let planActuel = null; // plan en cours (voir js/plans.js) : { id, nom } en mode local, { fichier, nom } en mode fichiers, null avant tout choix
 
   function mettreAJourBoutonEchelle() {
@@ -159,16 +165,18 @@
   Origine.alDefinie(mettreAJourBoutonOrigine);
   Echelle.alDefinie(mettreAJourBoutonOrigine);
 
-  // Construit l'état complet du projet (blueprint + habillage + propositions,
-  // chacune avec ses propres meubles) pour sauvegarde/export.
+  // Construit l'état complet du plan (blueprint + habillage) pour
+  // sauvegarde/export. Les propositions ne sont PAS incluses : elles sont
+  // au niveau du projet, partagées par tous ses plans — voir
+  // js/propositions.js/js/propositions-stockage.js.
   function construireProjet() {
-    Propositions.synchroniser(); // recopie Meubles.liste dans la proposition active
+    Propositions.synchroniser(); // recopie Meubles.liste dans la proposition active, pour ce plan
     return {
       version: 1,
       id: projetId,
       nom: planActuel ? planActuel.nom : null,
       plan: {
-        image: blueprintActuel.dataUrl,
+        cheminImage: blueprintActuel.chemin,
         largeurPx: blueprintActuel.largeurPx,
         hauteurPx: blueprintActuel.hauteurPx,
         echellePxParCm: Echelle.pxParCm,
@@ -176,8 +184,7 @@
         origineY: Origine.definie ? Origine.decalageY : null
       },
       habillage: Habillage.liste,
-      cadreExport: CadreExport.cadre,
-      propositions: Propositions.liste
+      cadreExport: CadreExport.cadre
     };
   }
 
@@ -186,15 +193,17 @@
   // js/plans.js), dans le plan lui-même — localStorage en mode local,
   // plans/*.json (via PHP) en mode fichiers. Le catalogue N'EST PAS inclus
   // ici : il est global (partagé par tous les plans), sauvegardé à part
-  // par sauvegarderCatalogue() — voir js/catalogue-stockage.js.
+  // par sauvegarderCatalogue() — voir js/catalogue-stockage.js. Les
+  // propositions non plus : global au projet aussi, sauvegardées à part par
+  // PropositionsStockage (voir js/propositions-stockage.js), mais à chaque
+  // sauvegarde de plan (contrairement au catalogue) car leurs meubles
+  // changent à chaque édition.
   function sauvegarderProjet() {
     if (!blueprintActuel) return;
     const projet = construireProjet();
     Stockage.sauvegarder(projet);
-    if (planActuel) {
-      Plans.sauvegarder(planActuel, projet);
-      Plans.memoriserDernier(planActuel);
-    }
+    if (planActuel) Plans.sauvegarder(planActuel, projet);
+    PropositionsStockage.sauvegarder(Propositions.liste);
   }
 
   function sauvegarderCatalogue() {
@@ -212,18 +221,21 @@
   function appliquerProjet(projet, messageStatut) {
     if (!projet || !projet.plan) return;
 
-    const { image, largeurPx, hauteurPx, echellePxParCm, origineX, origineY } = projet.plan;
-    blueprintActuel = { dataUrl: image, largeurPx, hauteurPx };
+    const { cheminImage, largeurPx, hauteurPx, echellePxParCm, origineX, origineY } = projet.plan;
+    blueprintActuel = { chemin: cheminImage, largeurPx, hauteurPx };
     projetId = projet.id || crypto.randomUUID(); // reprend l'id existant, ou en génère un (anciens fichiers)
     Echelle.pxParCm = echellePxParCm || Echelle.PX_PAR_CM_DEFAUT;
     Origine.charger(origineX, origineY);
-    Viewport.definirPlan(image, largeurPx, hauteurPx);
+    Viewport.definirPlan(cheminImage, largeurPx, hauteurPx);
     zoneTravail.classList.add("blueprint-charge");
     Habillage.charger(projet.habillage || []);
     // Le catalogue est global (voir js/catalogue-stockage.js), pas rechargé
     // ici. Un éventuel catalogue embarqué (ancien format, incompatible) est
-    // ignoré — pas de migration, voir documentation/17-catalogue.md.
-    Propositions.charger(projet.propositions || []); // recharge aussi Meubles (proposition active)
+    // ignoré — pas de migration, voir documentation/17-catalogue.md. Les
+    // propositions non plus : global au projet, déjà chargées à son
+    // ouverture (voir chargerPropositionsProjet) — on affiche juste celles
+    // de CE plan (garde la même proposition active par id).
+    Propositions.activerPourPlan(idPlanActuel());
     CadreExport.definir(projet.cadreExport);
     Viewport.cadrerSurRectangle(CadreExport.cadre);
     Regles.redessiner();
@@ -236,15 +248,15 @@
 
   async function chargerFichierBlueprint(fichier) {
     try {
-      const { dataUrl, largeurPx, hauteurPx } = await Blueprint.charger(fichier);
+      const { chemin, largeurPx, hauteurPx } = await Blueprint.charger(fichier, { mode: Plans.mode });
 
       // Un blueprint était déjà chargé : on ne fait que remplacer l'image de
       // fond, sans toucher à l'échelle, aux meubles/habillage, au catalogue,
       // aux propositions ni au cadre d'export — l'utilisateur n'a pas à tout
       // recaler après un simple changement d'image de fond.
       if (blueprintActuel) {
-        blueprintActuel = { dataUrl, largeurPx, hauteurPx };
-        Viewport.definirPlan(dataUrl, largeurPx, hauteurPx);
+        blueprintActuel = { chemin, largeurPx, hauteurPx };
+        Viewport.definirPlan(chemin, largeurPx, hauteurPx);
         Regles.redessiner();
         Grille.redessiner();
         sauvegarderProjet();
@@ -252,17 +264,19 @@
         return;
       }
 
-      blueprintActuel = { dataUrl, largeurPx, hauteurPx };
+      blueprintActuel = { chemin, largeurPx, hauteurPx };
       // Nouveau projet = nouvel identifiant, sauf s'il s'agit du premier
       // blueprint importé dans un plan local déjà créé (reprend son id).
       projetId = (planActuel && Plans.mode === Plans.MODE_LOCAL) ? planActuel.id : crypto.randomUUID();
       Echelle.pxParCm = Echelle.PX_PAR_CM_DEFAUT;
       Origine.reinitialiser();
       Habillage.charger([]);
-      // Catalogue non touché : global, partagé par tous les plans (voir
-      // js/catalogue-stockage.js), pas remis à zéro pour un nouveau plan.
-      Propositions.charger([]); // recrée une proposition unique par défaut (et vide Meubles)
-      Viewport.definirPlan(dataUrl, largeurPx, hauteurPx);
+      // Catalogue et propositions non touchés : globaux, partagés par tous
+      // les plans (voir js/catalogue-stockage.js/js/propositions.js), pas
+      // remis à zéro pour un nouveau plan. Meubles vide naturellement : ce
+      // nouveau plan n'a encore aucune donnée dans meublesParPlan.
+      Propositions.activerPourPlan(idPlanActuel());
+      Viewport.definirPlan(chemin, largeurPx, hauteurPx);
       zoneTravail.classList.add("blueprint-charge");
       CadreExport.reinitialiser(); // cadre = tout le nouveau blueprint
       Regles.redessiner();
@@ -276,30 +290,62 @@
     }
   }
 
-  // Charge le catalogue global (partagé par tous les plans) une seule fois
-  // au démarrage — voir js/catalogue-stockage.js. Pas de migration depuis
-  // les anciens catalogues embarqués par plan : rien de sauvegardé encore
-  // = catalogue vide, on repart de zéro.
-  async function chargerCatalogueGlobal() {
-    CatalogueStockage.init();
+  // Charge le catalogue du projet donné une seule fois à son ouverture —
+  // voir js/catalogue-stockage.js. Pas de migration depuis les anciens
+  // catalogues embarqués par plan : rien de sauvegardé encore = catalogue
+  // vide, on repart de zéro.
+  async function chargerCatalogueProjet(projetIdCible, projetNom) {
+    CatalogueStockage.init(projetIdCible);
     const donnees = await CatalogueStockage.charger();
     Catalogue.charger(donnees ? donnees.catalogue : [], donnees ? donnees.id : null);
+    console.log("[debug] catalogue chargé (index.html)", {
+      projetId: projetIdCible,
+      projetNom,
+      catalogueId: Catalogue.id,
+      nbObjets: Catalogue.liste.length,
+      objetsIds: Catalogue.liste.map((m) => m.id)
+    });
   }
 
-  // Au démarrage : rouvre directement le dernier plan utilisé s'il existe
-  // encore (voir Plans.memoriserDernier/dernierPlanId), sinon affiche
-  // l'écran de choix (voir js/plans.js, js/selecteur-plans.js et
-  // documentation/20-plans.md).
-  async function demarrerSelectionPlan() {
-    Plans.init();
-    await chargerCatalogueGlobal();
-    const liste = await Plans.lister();
-    const dernierId = Plans.dernierPlanId();
+  // Au démarrage : rouvre directement le dernier projet utilisé s'il existe
+  // encore (voir Projets.memoriserDernier/dernierProjetId), sinon affiche
+  // l'écran de choix (voir js/projets.js, js/selecteur-projets.js et
+  // documentation/21-projets.md).
+  async function demarrerSelectionProjet() {
+    Projets.init();
+    const liste = await Projets.lister();
+    const dernierId = Projets.dernierProjetId();
     const dernier = dernierId ? liste.find((p) => p.id === dernierId) : null;
     if (dernier) {
-      ouvrirPlan(dernier);
+      ouvrirProjet(dernier);
       return;
     }
+    SelecteurProjets.afficher(liste, (projet) => ouvrirProjet(projet));
+  }
+
+  // Ouvre un projet : scope Plans/CatalogueStockage dessus, puis affiche
+  // toujours l'écran de choix de plan (voir js/plans.js,
+  // js/selecteur-plans.js et documentation/20-plans.md) — pas de reprise
+  // automatique du dernier plan utilisé. `projet.nouveau` (voir
+  // js/selecteur-projets.js) : le crée d'abord.
+  async function ouvrirProjet(projet) {
+    if (projet.nouveau) projet = Projets.creer(projet.nom);
+
+    projetActuel = projet;
+    labelProjetActuel.textContent = projet.nom;
+    labelVueCatalogueProjet.textContent = `— ${projet.nom}`;
+    Projets.memoriserDernier(projet);
+
+    console.log("[debug] projet ouvert (index.html)", { projetId: projet.id, projetNom: projet.nom });
+    Plans.init(projet.id);
+    await chargerCatalogueProjet(projet.id, projet.nom);
+    await Propositions.chargerProjet(projet.id);
+
+    const liste = await Plans.lister();
+
+    // masquer()/afficher() juste après, sans await entre les deux : évite un
+    // flash de l'app vide entre les deux écrans de choix.
+    SelecteurProjets.masquer();
     SelecteurPlans.afficher(liste, (plan) => ouvrirPlan(plan));
   }
 
@@ -341,23 +387,29 @@
 
       if (!projet) {
         alert(I18n.t("app.plan_impossible_charger"));
-        Plans.oublierDernier();
-        location.reload();
+        SelecteurPlans.afficher(await Plans.lister(), (p) => ouvrirPlan(p));
         return;
       }
       planActuel = plan;
       labelPlanActuel.textContent = planActuel.nom;
       appliquerProjet(projet, I18n.t("app.plan_ouvert", { nom: plan.nom }));
+      console.log("[debug] plan ouvert (index.html)", {
+        planId: plan.id || plan.fichier,
+        planNom: plan.nom,
+        projetId: projetActuel ? projetActuel.id : null,
+        catalogueId: Catalogue.id,
+        nbObjetsCatalogue: Catalogue.liste.length
+      });
     } finally {
       chargementPlanEnCours = false;
       sidebarPlansListe.classList.remove("chargement");
     }
   }
 
-  // Exporte TOUS les plans en un seul fichier (pas seulement le plan
-  // courant) : le catalogue étant global (voir js/catalogue-stockage.js),
-  // ça reste la seule façon d'obtenir une sauvegarde complète et portable
-  // de tout ce qui est stocké — voir importerFichierProjet pour la lecture.
+  // Exporte le PROJET complet (tous ses plans + son catalogue) en un seul
+  // fichier — voir importerFichierProjet pour la lecture. Plans/Catalogue
+  // sont déjà scopés au projet ouvert (voir ouvrirProjet), donc Plans.lister()
+  // et Catalogue.liste ne portent que sur lui.
   async function exporterProjet() {
     if (!blueprintActuel) {
       alert(I18n.t("app.importer_blueprint_avant_projet"));
@@ -375,9 +427,15 @@
       if (projet) plans.push(projet);
     }
 
-    const nomParDefaut = `plans_${new Date().toISOString().slice(0, 10)}`;
-    const nom = prompt(I18n.t("app.nom_fichier_plans_prompt", { n: plans.length }), nomParDefaut) || nomParDefaut;
-    const paquet = { version: 1, catalogue: Catalogue.liste, catalogueId: Catalogue.id, plans };
+    // Le plan actif peut avoir des meubles pas encore resynchronisés dans sa
+    // proposition active (voir construireProjet) : fait avant d'exporter
+    // Propositions.liste, sinon l'export figerait un état périmé.
+    Propositions.synchroniser();
+
+    const nomProjet = projetActuel ? projetActuel.nom : "";
+    const nomParDefaut = `projet_${nomProjet.replace(/[^a-z0-9]+/gi, "_").toLowerCase() || "export"}`;
+    const nom = prompt(I18n.t("app.nom_fichier_projet_prompt", { projet: nomProjet, n: plans.length }), nomParDefaut) || nomParDefaut;
+    const paquet = { version: 1, projetNom: nomProjet, catalogue: Catalogue.liste, catalogueId: Catalogue.id, propositions: Propositions.liste, plans };
     const blob = new Blob([JSON.stringify(paquet, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const lien = document.createElement("a");
@@ -385,7 +443,7 @@
     lien.download = `${nom}.json`;
     lien.click();
     URL.revokeObjectURL(url);
-    Statut.definir(I18n.t("app.plans_exportes", { n: plans.length, nom }));
+    Statut.definir(I18n.t("app.projet_exporte", { projet: nomProjet, n: plans.length, nom }));
   }
 
   // Persiste un plan importé (nouvelle entrée) sans l'ouvrir, pour
@@ -402,14 +460,25 @@
     return cible;
   }
 
-  // Importe le paquet multi-plans produit par exporterProjet() : absorbe le
-  // catalogue embarqué dans le catalogue global, persiste chaque plan comme
-  // une nouvelle entrée (jamais d'écrasement d'un plan existant), puis
-  // ouvre le premier.
+  // Importe le paquet produit par exporterProjet() : crée un TOUT NOUVEAU
+  // projet (jamais d'écrasement d'un projet existant), y installe son
+  // catalogue, persiste chaque plan comme nouvelle entrée, puis ouvre le
+  // premier — symétrique de l'export, un projet importé reste indépendant
+  // de tout projet déjà présent.
   async function importerPaquetPlans(paquet) {
+    const nomProjet = paquet.projetNom || I18n.t("projets.nouveau_nom_defaut");
+    const nouveauProjet = Projets.creer(nomProjet);
+
+    Plans.init(nouveauProjet.id);
+    await chargerCatalogueProjet(nouveauProjet.id, nouveauProjet.nom);
     if (Array.isArray(paquet.catalogue) && paquet.catalogue.length) {
-      const ajoutes = Catalogue.fusionner(paquet.catalogue);
-      if (ajoutes) sauvegarderCatalogue();
+      Catalogue.charger(paquet.catalogue, paquet.catalogueId || null);
+      sauvegarderCatalogue();
+    }
+    await Propositions.chargerProjet(nouveauProjet.id);
+    if (Array.isArray(paquet.propositions) && paquet.propositions.length) {
+      Propositions.liste = paquet.propositions.map((p) => ({ ...p, meublesParPlan: p.meublesParPlan || {} }));
+      PropositionsStockage.sauvegarder(Propositions.liste);
     }
 
     let premier = null;
@@ -419,8 +488,48 @@
       if (i === 0) premier = { ...cible, nom: projet.nom };
     }
 
-    Statut.definir(I18n.t("app.plans_importes", { n: paquet.plans.length }));
+    projetActuel = nouveauProjet;
+    labelProjetActuel.textContent = nouveauProjet.nom;
+    labelVueCatalogueProjet.textContent = `— ${nouveauProjet.nom}`;
+    Projets.memoriserDernier(nouveauProjet);
+
+    Statut.definir(I18n.t("app.projet_importe", { projet: nomProjet, n: paquet.plans.length }));
     if (premier) ouvrirPlan(premier);
+  }
+
+  // Importe des plans déjà exportés ailleurs (fichier "Enregistrer sous..."
+  // — paquet multi-plans OU plan isolé au format historique, voir
+  // documentation/20-plans.md) DANS LE PROJET COURANT — contrairement à
+  // importerFichierProjet/importerPaquetPlans, qui créent toujours un
+  // nouveau projet. Appelé depuis l'écran de choix de plan (voir
+  // js/selecteur-plans.js, "Importer des plans...").
+  function importerPlansVersProjetCourant(fichier) {
+    const lecteur = new FileReader();
+    lecteur.onerror = () => alert(I18n.t("app.fichier_illisible"));
+    lecteur.onload = async () => {
+      try {
+        const donnees = JSON.parse(lecteur.result);
+        const plansAImporter = Array.isArray(donnees.plans) ? donnees.plans : [donnees];
+        if (!plansAImporter.length || !plansAImporter.every((p) => p && p.plan)) {
+          throw new Error("format invalide");
+        }
+
+        if (Array.isArray(donnees.catalogue) && donnees.catalogue.length) {
+          const ajoutes = Catalogue.fusionner(donnees.catalogue);
+          if (ajoutes) sauvegarderCatalogue();
+        }
+
+        for (let i = 0; i < plansAImporter.length; i++) {
+          await importerPlanSansOuvrir(plansAImporter[i], I18n.t("app.plan_importe_defaut", { n: i + 1 }));
+        }
+
+        await SelecteurPlans.rafraichir();
+        alert(I18n.t("app.plans_importes_projet", { n: plansAImporter.length }));
+      } catch (erreur) {
+        alert(I18n.t("app.fichier_projet_invalide"));
+      }
+    };
+    lecteur.readAsText(fichier);
   }
 
   function importerFichierProjet(fichier) {
@@ -451,7 +560,7 @@
   // modeleId y fait référence) : à ne pas modifier à la main sur une ligne
   // existante, sous peine de délier les instances déjà posées de ce prefab.
   // La laisser vide sur une nouvelle ligne en génère un neuf à l'import.
-  const CSV_ENTETES = ["id", "nom", "description", "type", "largeur_cm", "profondeur_cm", "hauteur_cm", "a_demenager"];
+  const CSV_ENTETES = ["id", "nom", "description", "type", "largeur_cm", "profondeur_cm", "hauteur_cm"];
 
   function csvEchapperChamp(valeur) {
     const texte = String(valeur ?? "");
@@ -515,10 +624,9 @@
       modele.nom,
       modele.description || "",
       PlannerConf.trouverType(modele.type).libelle,
-      Math.round(modele.largeur),
-      Math.round(modele.hauteur),
-      modele.hauteurCm ?? "",
-      modele.aDemenager !== false ? "oui" : "non"
+      typeof modele.largeur === "number" ? Math.round(modele.largeur) : "",
+      typeof modele.hauteur === "number" ? Math.round(modele.hauteur) : "",
+      modele.hauteurCm ?? ""
     ])];
     const csv = lignes.map((ligne) => ligne.map(csvEchapperChamp).join(",")).join("\r\n");
     // BOM UTF-8 : Excel n'ouvre correctement les accents en CSV qu'avec ce préfixe.
@@ -549,7 +657,6 @@
         const iLargeur = colonne("largeur_cm");
         const iProfondeur = colonne("profondeur_cm");
         const iHauteur = colonne("hauteur_cm");
-        const iADemenager = colonne("a_demenager");
         if (iNom === -1) throw new Error("colonne nom manquante");
 
         let typesInconnus = 0;
@@ -567,8 +674,7 @@
               type: (type || PlannerConf.trouverType(null)).id,
               largeur: parseFloat(champs[iLargeur]) || 100,
               hauteur: parseFloat(champs[iProfondeur]) || 100,
-              hauteurCm: iHauteur > -1 && champs[iHauteur].trim() !== "" ? parseFloat(champs[iHauteur]) : null,
-              aDemenager: iADemenager > -1 ? !/^(non|false|0)$/i.test(champs[iADemenager].trim()) : true
+              hauteurCm: iHauteur > -1 && champs[iHauteur].trim() !== "" ? parseFloat(champs[iHauteur]) : null
             };
           });
 
@@ -596,7 +702,12 @@
       "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;"
     }[car]));
 
+    // N'imprime que les prefabs "à déménager", posés (quantite > 0) et avec
+    // une hauteur réelle renseignée (seuls ceux-là ont un volume) — inutile
+    // pour un déménagement de lister un objet acheté sur place, un volume
+    // fixe déjà en place, ou un prefab jamais posé.
     let volumeTotalM3 = 0;
+    let nbLignes = 0;
     const lignes = EditionCatalogue._listeTrieeParType().map((modele) => {
       // Comme la vue d'édition du catalogue : si une instance est posée sur
       // le plan de la proposition active, on imprime ses valeurs actuelles
@@ -607,42 +718,36 @@
       const instances = EditionCatalogue._instancesPosees(modele.id);
       const instance = instances[0] || null;
       const quantite = instances.length;
-      const nom = modele.nom; // nom du prefab — distinct du nom (auto-incrémenté) de chaque instance
+      const hauteurCm = instance ? instance.hauteurCm : modele.hauteurCm;
       const typeId = instance ? instance.type : modele.type;
+      if (quantite === 0 || typeof hauteurCm !== "number" || !PlannerConf.estADemenager(typeId)) return "";
+
+      const nom = modele.nom; // nom du prefab — distinct du nom (auto-incrémenté) de chaque instance
       // modele.largeur/hauteur sont déjà en cm ; une instance posée est en
       // px (convertie selon l'échelle du plan actif) — voir js/catalogue.js.
-      const largeurCmBrute = instance ? instance.largeur / pxParCm : modele.largeur;
-      const profondeurCmBrute = instance ? instance.hauteur / pxParCm : modele.hauteur;
-      const hauteurCm = instance ? instance.hauteurCm : modele.hauteurCm;
-      const aDemenager = instance ? instance.aDemenager !== false : modele.aDemenager !== false;
-      const largeurCm = Math.round(largeurCmBrute);
-      const profondeurCm = Math.round(profondeurCmBrute);
-      const hauteurReelleCm = hauteurCm ?? "-";
-      // Comme la vue catalogue : rien tant qu'aucune instance n'est posée
-      // (quantite = 0), pas de "0.00 m³" trompeur.
-      let volumeTexte = quantite === 0 ? "" : "-";
-      if (quantite > 0 && typeof hauteurCm === "number" && aDemenager) {
-        const volumeM3 = (largeurCm * profondeurCm * hauteurCm * quantite) / 1e6;
-        volumeTotalM3 += volumeM3;
-        volumeTexte = `${volumeM3.toFixed(2)} m³`;
-      }
+      const largeurCm = Math.round(instance ? instance.largeur / pxParCm : modele.largeur);
+      const profondeurCm = Math.round(instance ? instance.hauteur / pxParCm : modele.hauteur);
+      const volumeUnitaireM3 = (largeurCm * profondeurCm * hauteurCm) / 1e6;
+      const volumeTotalPrefabM3 = volumeUnitaireM3 * quantite;
+      volumeTotalM3 += volumeTotalPrefabM3;
+      nbLignes++;
       const descriptionHtml = modele.description
         ? `<div class="impression-catalogue-description">${echapper(modele.description)}</div>`
         : "";
       return `<tr>
         <td>${PlannerConf.iconeHtml(typeId, "impression-catalogue-icone")} ${echapper(nom)}${descriptionHtml}</td>
-        <td>${largeurCm} × ${profondeurCm} × ${hauteurReelleCm} cm</td>
+        <td>${largeurCm} × ${profondeurCm} × ${hauteurCm} cm</td>
         <td>${quantite}</td>
-        <td>${aDemenager ? I18n.t("commun.oui") : I18n.t("commun.non")}</td>
-        <td>${volumeTexte}</td>
+        <td>${volumeUnitaireM3.toFixed(2)} m³</td>
+        <td>${volumeTotalPrefabM3.toFixed(2)} m³</td>
       </tr>`;
     }).join("");
 
     impressionCatalogue.innerHTML = `
       <h1>${I18n.t("app.impression_titre", { id: echapper(Catalogue.id || "") })}</h1>
-      <p>${I18n.t("app.impression_objets", { n: Catalogue.liste.length })}</p>
+      <p>${I18n.t("app.impression_objets", { n: nbLignes })}</p>
       <table>
-        <thead><tr><th>${I18n.t("catalogue_vue.th_nom")}</th><th>${I18n.t("app.impression_th_lph")}</th><th>${I18n.t("catalogue_vue.th_qte")}</th><th>${I18n.t("catalogue_vue.th_a_demenager")}</th><th>${I18n.t("catalogue_vue.th_volume")}</th></tr></thead>
+        <thead><tr><th>${I18n.t("catalogue_vue.th_nom")}</th><th>${I18n.t("app.impression_th_lph")}</th><th>${I18n.t("catalogue_vue.th_qte")}</th><th>${I18n.t("app.impression_th_volume_unitaire")}</th><th>${I18n.t("app.impression_th_volume_total")}</th></tr></thead>
         <tbody>${lignes}</tbody>
         <tfoot><tr><td colspan="4"><strong>${I18n.t("commun.total")}</strong></td><td><strong>${volumeTotalM3.toFixed(2)} m³</strong></td></tr></tfoot>
       </table>
@@ -730,6 +835,13 @@
   btnImporterCatalogue.addEventListener("click", () => inputFichierCatalogue.click());
   btnImprimerCatalogue.addEventListener("click", () => imprimerCatalogue());
   btnEditerCatalogue.addEventListener("click", () => EditionCatalogue.basculer());
+  // Depuis l'écran de choix de plan (voir js/selecteur-plans.js) : ouvre le
+  // même overlay d'édition, en mémoire depuis l'ouverture du projet (voir
+  // chargerCatalogueProjet) — pas de page séparée (catalog.html a été
+  // retiré : en file://, chaque page HTML a son propre localStorage isolé,
+  // une page séparée ne pouvait donc pas relire/sauvegarder le même
+  // catalogue de façon fiable en mode local).
+  btnEditerCatalogueDepuisPlans.addEventListener("click", () => EditionCatalogue.afficher());
   btnExporterPng.addEventListener("click", () => exporterPNG());
   btnGrille.addEventListener("click", () => {
     const { actif, subdivisions } = Grille.basculer();
@@ -813,11 +925,20 @@
     exporterProjet();
   });
 
+  SelecteurProjets.init({
+    overlay: document.getElementById("vue-projets"),
+    grille: document.getElementById("projets-grille"),
+    boutonNouveau: document.getElementById("projet-nouveau")
+  });
+
   SelecteurPlans.init({
     overlay: document.getElementById("vue-plans"),
     grille: document.getElementById("plans-grille"),
-    boutonNouveau: document.getElementById("plan-nouveau")
+    boutonNouveau: document.getElementById("plan-nouveau"),
+    boutonImporter: document.getElementById("plans-importer"),
+    inputImporter: document.getElementById("input-fichier-plans-importer")
   });
+  SelecteurPlans.alImporter((fichier) => importerPlansVersProjetCourant(fichier));
 
   // Sidebar (ancrée à gauche) : changer de plan sans revenir à l'écran
   // d'accueil ni recharger la page (voir js/sidebar-plans.js). Le plan en
@@ -855,6 +976,15 @@
     }
   });
 
+  // Retour à l'écran de choix de projet, depuis le bas de la sidebar : pas
+  // de mécanisme équivalent à la sidebar pour les projets — on recharge
+  // simplement la page (le plan/projet en cours est déjà sauvegardé en
+  // continu, donc aucune perte).
+  btnChangerProjet.addEventListener("click", () => {
+    Projets.oublierDernier();
+    location.reload();
+  });
+
   sidebarPlansFermer.addEventListener("click", fermerSidebarPlans);
   sidebarPlansFond.addEventListener("click", fermerSidebarPlans);
   btnChangerPlan.addEventListener("click", () => {
@@ -865,5 +995,5 @@
     }
   });
 
-  demarrerSelectionPlan();
+  demarrerSelectionProjet();
 })();

@@ -5,13 +5,24 @@
 <title>Planner</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="choix-plan">
+<body class="choix-projet">
+
+<div id="vue-projets">
+  <div id="vue-projets-panneau">
+    <h1 data-i18n="projets.titre">Projets</h1>
+    <div id="projets-grille"></div>
+    <button id="projet-nouveau" class="plan-carte plan-carte-nouveau" type="button" data-i18n="projets.nouveau_bouton">+ Nouveau projet</button>
+  </div>
+</div>
 
 <div id="vue-plans">
   <div id="vue-plans-panneau">
     <h1 data-i18n="plans.titre">Plans</h1>
     <div id="plans-grille"></div>
     <button id="plan-nouveau" class="plan-carte plan-carte-nouveau" type="button" data-i18n="plans.nouveau_bouton">+ Nouveau plan</button>
+    <button id="btn-editer-catalogue-plans" class="plan-carte plan-carte-nouveau" type="button" data-i18n="catalogue_page.lien_depuis_plans">Éditer le catalogue</button>
+    <hr class="vue-plans-separateur">
+    <button id="plans-importer" class="plan-carte plan-carte-nouveau" type="button" data-i18n="plans.importer_bouton">Importer un projet</button>
   </div>
 </div>
 
@@ -23,12 +34,15 @@
   </div>
   <div id="sidebar-plans-liste"></div>
   <button id="sidebar-plans-nouveau" type="button" data-i18n="plans.nouveau_bouton">+ Nouveau plan</button>
+  <button id="btn-changer-projet" type="button"><img class="barre-icone" src="icones/ui/projets.svg" alt=""><span data-i18n="menu.changer_projet">Changer de projet</span></button>
 </div>
 
 <div id="barre-outils">
   <div class="barre-groupe barre-gauche">
     <button id="btn-changer-plan" title="Changer de plan" data-i18n-title="barre.changer_plan_title"><img class="barre-icone" src="icones/ui/plans.svg" alt=""></button>
-    <span id="label-plan-actuel" title="Plan en cours" data-i18n-title="barre.plan_actuel_title"></span>
+    <span class="label-projet-plan">
+      <span id="label-projet-actuel" title="Projet en cours" data-i18n-title="barre.projet_actuel_title"></span><span class="label-projet-plan-separateur">-</span><span id="label-plan-actuel" title="Plan en cours" data-i18n-title="barre.plan_actuel_title"></span>
+    </span>
     <span class="separateur"></span>
     <button id="btn-importer-blueprint" title="Importer un blueprint" data-i18n-title="barre.importer_blueprint_title"><img class="barre-icone" src="icones/ui/blueprint.svg" alt=""></button>
     <button id="btn-mode" title="Mode édition"></button>
@@ -136,14 +150,14 @@
         <div class="insp-lecture-seule">
           <span data-i18n="inspecteur.rotation_label">Rotation :</span> <span id="insp-rotation">-</span>
         </div>
-        <details class="insp-foldout">
-          <summary data-i18n="inspecteur.ordre_affichage">Ordre d'affichage</summary>
+        <label>
+          <span data-i18n="inspecteur.ordre_affichage">Ordre d'affichage</span>
           <select id="insp-z-ordre">
             <option value="bas" data-i18n="inspecteur.arriere_plan">Arrière-plan</option>
             <option value="normal" selected data-i18n="inspecteur.normal">Normal</option>
             <option value="haut" data-i18n="inspecteur.premier_plan">Premier plan</option>
           </select>
-        </details>
+        </label>
       </div>
 
       <button id="insp-supprimer" class="insp-danger" data-i18n="commun.supprimer">Supprimer</button>
@@ -156,11 +170,17 @@
     <div id="vue-catalogue-entete">
       <div id="vue-catalogue-titre-actions">
         <h2 data-i18n="catalogue_vue.titre">Catalogue</h2>
+        <span id="vue-catalogue-projet" class="vue-catalogue-projet"></span>
         <button id="vue-catalogue-importer" title="Importer un catalogue (CSV)..." data-i18n-title="catalogue_vue.importer_title"><img class="barre-icone" src="icones/ui/importer.svg" alt=""></button>
         <button id="vue-catalogue-exporter" title="Exporter le catalogue (CSV)..." data-i18n-title="catalogue_vue.exporter_title"><img class="barre-icone" src="icones/ui/exporter.svg" alt=""></button>
         <button id="vue-catalogue-imprimer" title="Imprimer le détail du catalogue" data-i18n-title="catalogue_vue.imprimer_title"><img class="barre-icone" src="icones/ui/imprimer.svg" alt=""></button>
       </div>
       <button id="vue-catalogue-fermer" title="Fermer" data-i18n-title="commun.fermer">✕</button>
+    </div>
+    <div id="vue-catalogue-onglets">
+      <button id="vue-catalogue-onglet-a-trier" class="vue-catalogue-onglet" data-onglet="a_trier" type="button" title="Objets encore au type par défaut &quot;Générique&quot; : pas encore paramétrés" data-i18n-title="catalogue_vue.onglet_a_trier_title" data-i18n="catalogue_vue.onglet_a_trier">À trier</button>
+      <button id="vue-catalogue-onglet-a-demenager" class="vue-catalogue-onglet vue-catalogue-onglet-actif" data-onglet="a_demenager" type="button" data-i18n="catalogue_vue.onglet_a_demenager">À déménager</button>
+      <button id="vue-catalogue-onglet-non-a-demenager" class="vue-catalogue-onglet" data-onglet="non_a_demenager" type="button" title="Type &quot;Volume fixe&quot; : passer un objet dans cet onglet se fait en changeant son type" data-i18n-title="catalogue_vue.onglet_non_a_demenager_title" data-i18n="catalogue_vue.onglet_non_a_demenager">Non déménagés</button>
     </div>
     <div id="vue-catalogue-corps">
       <table id="vue-catalogue-table">
@@ -173,7 +193,6 @@
             <th data-i18n="catalogue_vue.th_profondeur">Profondeur (cm)</th>
             <th data-i18n="catalogue_vue.th_hauteur">Hauteur (cm)</th>
             <th data-i18n="catalogue_vue.th_qte">Qté</th>
-            <th title="Objet à déménager (compté dans le volume total)" data-i18n-title="catalogue_vue.th_a_demenager_title" data-i18n="catalogue_vue.th_a_demenager">À déménager</th>
             <th data-i18n="catalogue_vue.th_volume">Volume</th>
             <th></th>
           </tr>
@@ -191,6 +210,7 @@
 
 <input type="file" id="input-fichier-blueprint" accept="image/png,image/jpeg" hidden>
 <input type="file" id="input-fichier-projet" accept="application/json,.json" hidden>
+<input type="file" id="input-fichier-plans-importer" accept="application/json,.json" hidden>
 <input type="file" id="input-fichier-catalogue" accept="text/csv,.csv" hidden>
 
 <script src="js/version.js"></script>
@@ -216,8 +236,11 @@
 <script src="js/mode.js"></script>
 <script src="js/inspecteur.js"></script>
 <script src="js/stockage.js"></script>
+<script src="js/projets.js"></script>
+<script src="js/selecteur-projets.js"></script>
 <script src="js/plans.js"></script>
 <script src="js/catalogue-stockage.js"></script>
+<script src="js/propositions-stockage.js"></script>
 <script src="js/selecteur-plans.js"></script>
 <script src="js/sidebar-plans.js"></script>
 <script src="js/app.js"></script>

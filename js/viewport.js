@@ -104,9 +104,10 @@ const Viewport = {
   // matcher le ratio du conteneur avant de l'appliquer comme viewBox.
   cadrerSurRectangle(rect) {
     if (!this.largeurPlan || !rect) return;
-    const PADDING_RATIO = 0.2;
-    const rectLargeur = rect.largeur * (1 + PADDING_RATIO * 2);
-    const rectHauteur = rect.hauteur * (1 + PADDING_RATIO * 2);
+    const PADDING_RATIO_X = 0.2;
+    const PADDING_RATIO_Y = 0.025;
+    const rectLargeur = rect.largeur * (1 + PADDING_RATIO_X * 2);
+    const rectHauteur = rect.hauteur * (1 + PADDING_RATIO_Y * 2);
 
     const conteneur = this.svg.getBoundingClientRect();
     const centreX = rect.x + rect.largeur / 2;

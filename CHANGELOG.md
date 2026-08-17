@@ -1,6 +1,43 @@
 # Changelog
 
+## 2026-08-17
+- Vue catalogue : entête de l'onglet "À trier" en orange tant qu'il contient des objets.
+- Vue catalogue : onglets renommés "Déménage"/"Sur place" (ex "À déménager"/"Non déménagés") ; "À trier" inclut maintenant aussi les objets sans largeur/profondeur renseignées (pas seulement le type "Générique"), cohérent avec leur absence du panneau rapide.
+- Catalogue : largeur/profondeur vides par défaut à la création d'un objet (plus de 100×100 cm imposé). Invisible dans le panneau rapide (liste des objets posables) tant qu'elles ne sont pas renseignées ; la hauteur réelle reste facultative. Volume affiché seulement si les 3 (largeur/profondeur/hauteur) sont renseignées, vide sinon.
+- Catalogue : nouveau type "Chevet" (petites tables d'appoint).
+- Ajout d'un objet depuis le catalogue : la première instance reprend le nom du modèle tel quel (plus de "Chaise 1") ; un numéro "(N)" n'est ajouté qu'à partir de la 2e instance du même modèle.
+- Vue catalogue : nouvel onglet "À trier", regroupe les objets encore au type par défaut "Générique" (pas encore paramétrés) — ouvert automatiquement à la création d'un nouvel objet.
+- Inspecteur : "Ordre d'affichage" affiché directement (retrait du repli/dépli).
+- Vue catalogue : nom du projet affiché dans l'entête, pour identifier à quel projet le catalogue appartient.
+- Ajout d'un objet au catalogue (panneau rapide ou vue d'édition) : surlignage temporaire + défilement automatique vers la ligne ajoutée.
+- Écran de choix de plan : bouton "Importer des plans..." renommé "Importer un projet", déplacé après "Éditer le catalogue", séparé par un trait horizontal.
+- Fix : overlay d'édition du catalogue invisible depuis l'écran de choix de plan (z-index derrière cet écran).
+- Fix : `catalog.html` supprimé (bug non réparable en local : chaque page HTML a son propre `localStorage` isolé en `file://`, donc ne pouvait pas relire/sauvegarder de façon fiable le catalogue édité depuis un plan). "Éditer le catalogue" depuis l'écran de choix de plan ouvre maintenant le même overlay que dans un plan, sans changer de page.
+- Debug : logs console (`[debug]`) à l'ouverture d'un projet/plan/catalogue — id et nom du projet, id du catalogue, nombre d'objets et leurs ids.
+- Ouverture d'un projet : affiche toujours l'écran de choix de plan (retrait de la reprise automatique du dernier plan utilisé).
+- Blueprint : chemin retiré du sous-dossier par projet — `imports/<nom-original>` à plat (noms de fichiers uniques attendus dans tout `imports/`) au lieu de `imports/<projetId>/<nom-original>`.
+- Blueprint : ne stocke plus l'image en base64 dans le plan, mais un chemin relatif `imports/<projetId>/<nom-original>` — évite de saturer le stockage. En mode servi, téléversement automatique (`php/blueprint-televerser.php`). En local (`file://`), le fichier doit être copié à la main dans `imports/<projetId>/` avant l'import (aucune écriture disque possible depuis le navigateur). Conséquence : l'export/import de projet n'embarque plus les images. Casse la compat sur l'ancien champ `plan.image` (base64).
+- Alerte d'échec de sauvegarde d'un plan : affiche maintenant le message d'erreur réel (ex. quota dépassé), plus facile à diagnostiquer.
+- Écran de choix de plan : "Éditer le catalogue" devient un bouton comme "+ Nouveau plan"/"Importer des plans..." (au lieu d'un simple lien texte).
+- Écran de choix de plan : pastille par proposition ayant déjà du contenu sur ce plan (première lettre du nom), tant qu'aucun plan n'est encore ouvert.
+- Fix : échec de sauvegarde d'un plan (ex. stockage local plein) maintenant signalé par une alerte au lieu d'échouer en silence jusqu'au prochain rechargement ("impossible de charger ce plan").
+- Menu burger : retrait de la mention "active" sur "Renommer"/"Supprimer la proposition".
+- Bouton "Changer de projet" déplacé du burger vers le bas de la sidebar (après "+ Nouveau plan").
+- Barre d'outils : icône "Changer de plan" placée avant le libellé, qui affiche maintenant "Projet - Plan" combiné (au lieu de deux libellés séparés par l'icône).
+- Bouton "Changer de projet" déplacé de la barre d'outils vers le bas du menu burger (à côté de "Plan et propositions").
+- Propositions déplacées au niveau du projet (au lieu du plan) : une proposition est désormais partagée par tous les plans d'un projet, avec ses propres meubles par plan (`meublesParPlan`). Nouveau stockage dédié `js/propositions-stockage.js`/`php/propositions-sauvegarder.php`. Retiré des plans (`js/plans.js`), inclus dans l'export/import de projet. Suppression d'un plan purge ses données dans chaque proposition. Casse la compat sur l'ancien format (données déjà sauvegardées ignorées).
+
 ## 2026-08-16
+- Écran de choix de plan : nouveau bouton "Importer des plans..." pour importer des plans déjà exportés ailleurs (paquet multi-plans ou plan isolé) directement dans le projet en cours, sans créer un nouveau projet (contrairement à "Ouvrir un projet...").
+- Nouveau niveau "projet" au-dessus des plans (`js/projets.js`, `js/selecteur-projets.js`) : écran de choix au tout premier démarrage, avant même les plans. Un projet regroupe plusieurs plans (étages) et son propre catalogue (plus de catalogue global unique pour toute l'app — un catalogue par projet, voir `documentation/21-projets.md`). `Plans`/`CatalogueStockage` sont maintenant scopés au projet ouvert (clés localStorage/dossiers `projets/<id>/...` préfixés). Nouveau bouton "Changer de projet" dans la barre d'outils. Scripts PHP `php/projet-*.php` ajoutés. "Enregistrer sous..."/"Ouvrir un projet..." exportent/importent désormais un projet complet (tous ses plans + son catalogue), l'import créant toujours un nouveau projet. Pas de migration depuis l'ancien monde sans projets.
+- Nouvelle page `catalog.html` : édite le catalogue global (même vue à onglets, import/export CSV, impression) sans avoir à ouvrir un plan — lien depuis l'écran de choix des plans. `EditionCatalogue`/`Catalogue` tolèrent maintenant l'absence de `Meubles`/du panneau rapide.
+- Retrait du booléen "à déménager" (prefab/instance) : dérivé du type à la place (`PlannerConf.estADemenager`, faux uniquement pour "Volume fixe"). Passer un objet d'un onglet à l'autre se fait en changeant son type. Casse la compat sur ce champ ignoré (données déjà sauvegardées).
+- Changement de plan : si le plan ouvert a une proposition du même nom que la proposition active du plan qu'on quitte, elle est activée à sa place (au lieu de toujours retomber sur la première).
+- Bouton "Éditer le catalogue" déplacé des boutons ronds bas-droite vers bas-gauche, à côté du "+" (dupliquer décalé d'un cran).
+- Vue catalogue : deux onglets "À déménager" / "Non déménagés". La case "à déménager" fait passer l'objet d'un onglet à l'autre. Le total volume ne s'affiche que sur l'onglet "À déménager".
+- Bouton "Cadrer" : padding haut/bas ramené de 20% à 2.5% de la hauteur du cadre (padding gauche/droite inchangé à 20%).
+- Scripts PHP regroupés dans un dossier `php/` (au lieu d'être dispersés dans `plans/` et `catalogue/`), préfixés par domaine : `plan-liste.php`, `plan-sauvegarder.php`, `plan-renommer.php`, `plan-supprimer.php`, `catalogue-sauvegarder.php`. `plans/` et `catalogue/` ne contiennent plus que des données (`.json`).
+- Impression du catalogue : ne liste plus que les prefabs "à déménager", posés et avec une hauteur renseignée (les seuls ayant un volume) — colonne "À déménager" retirée (implicite), colonne "Volume" scindée en "Volume unitaire" et "Volume total" par prefab.
 - Panneau rapide "+ Ajouter un meuble" : prefabs jamais utilisés (0 instance) mis en avant (fond orange clair). Le compte d'instances tient maintenant compte de TOUS les plans (parcourus en arrière-plan via `Plans.lister()`/`charger()`, mis en cache), pas seulement du plan actif.
 - Fix : grille et règles invisibles au premier chargement (canvas mesurés à 0x0 pendant que `#zone-travail` était en `display:none` derrière l'écran de choix de plan, jamais recalculés depuis — seul un resize fenêtre, ex. ouvrir les DevTools, corrigeait ça). `Regles`/`Grille` exposent maintenant `redimensionner()`, appelé explicitement à la fermeture de l'écran de choix de plan.
 - Retour des poignées de redimensionnement sur le plan (coins bas-gauche/haut-droit, suivent la rotation) : reportent la nouvelle taille (cm) sur le prefab du catalogue ET sur toutes ses autres instances déjà posées, dans toutes les propositions du plan actif.

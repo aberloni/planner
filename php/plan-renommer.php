@@ -1,17 +1,19 @@
 <?php
-// Renomme un plan (mode "servi") : met à jour le champ `nom` du JSON,
-// le fichier lui-même garde son nom — voir documentation/20-plans.md.
+// Renomme un plan d'un projet (mode "servi") : met à jour le champ `nom`
+// du JSON dans projets/<projet>/plans/, le fichier lui-même garde son nom
+// — voir documentation/20-plans.md.
 header('Content-Type: application/json');
 
+$projet = $_GET['projet'] ?? '';
 $fichier = $_GET['fichier'] ?? '';
 $nom = $_GET['nom'] ?? '';
-if (!preg_match('/^[a-zA-Z0-9_-]+\.json$/', $fichier) || $nom === '') {
+if (!preg_match('/^[a-zA-Z0-9_-]+$/', $projet) || !preg_match('/^[a-zA-Z0-9_-]+\.json$/', $fichier) || $nom === '') {
     http_response_code(400);
     echo json_encode(['erreur' => 'Paramètres invalides.']);
     exit;
 }
 
-$chemin = __DIR__ . '/' . $fichier;
+$chemin = __DIR__ . '/../projets/' . $projet . '/plans/' . $fichier;
 if (!is_file($chemin)) {
     http_response_code(404);
     echo json_encode(['erreur' => 'Plan introuvable.']);

@@ -79,7 +79,7 @@ const Catalogue = {
     const modele = this.creerVide();
     if (!modele) return;
     this.masquer();
-    EditionCatalogue.afficher();
+    EditionCatalogue.afficher(modele.id); // rendu + surlignage temporaire, voir _mettreEnAvant
     Statut.definir(I18n.t("catalogue.objet_cree", { nom: modele.nom }));
   },
 
@@ -89,15 +89,17 @@ const Catalogue = {
     const nom = prompt(I18n.t("catalogue.nom_nouvel_objet_prompt"), "");
     if (!nom || !nom.trim()) return null;
 
+    // largeur/hauteur (profondeur) vides par défaut — voir Catalogue.liste ;
+    // tant qu'elles ne sont pas renseignées, le prefab reste invisible dans
+    // le panneau rapide (voir _rendre ci-dessous) : rien à poser sans taille.
     const modele = {
       id: crypto.randomUUID(),
       nom: nom.trim(),
       description: "",
       type: PlannerConf.typeParDefaut,
-      largeur: 100, // cm, donnée brute — voir liste ci-dessus
-      hauteur: 100,
-      hauteurCm: null,
-      aDemenager: true
+      largeur: null, // cm, donnée brute — voir liste ci-dessus
+      hauteur: null,
+      hauteurCm: null
     };
 
     this.liste.push(modele);
@@ -162,15 +164,6 @@ const Catalogue = {
     this._notifier();
   },
 
-  // Reporte le statut "à déménager" d'une instance posée sur son modèle de
-  // catalogue d'origine (comme synchroniserType/synchroniserHauteurCm...).
-  synchroniserADemenager(modeleId, aDemenager) {
-    const modele = this.liste.find((m) => m.id === modeleId);
-    if (!modele || modele.aDemenager === aDemenager) return;
-    modele.aDemenager = aDemenager;
-    this._notifier();
-  },
-
   // Reporte la largeur/profondeur (CM — voir liste ci-dessus) d'une instance
   // posée sur son modèle de catalogue d'origine. L'appelant (objets.js,
   // redimensionner()) convertit depuis les px de l'instance avant d'appeler.
@@ -190,7 +183,13 @@ const Catalogue = {
   _rendre() {
     this.conteneurListe.innerHTML = "";
 
-    if (this.liste.length === 0) {
+    // Un prefab sans largeur/profondeur n'a rien de posable (pas de taille)
+    // — reste invisible ici tant qu'il n'est pas au moins dimensionné (voir
+    // js/edition-catalogue.js, onglet "À trier"). La hauteur réelle reste
+    // facultative.
+    const posables = this.liste.filter((m) => typeof m.largeur === "number" && typeof m.hauteur === "number");
+
+    if (posables.length === 0) {
       const vide = document.createElement("div");
       vide.className = "catalogue-vide";
       vide.textContent = I18n.t("catalogue.aucun_objet");
@@ -198,7 +197,7 @@ const Catalogue = {
       return;
     }
 
-    this.liste.forEach((modele) => {
+    posables.forEach((modele) => {
       const bouton = document.createElement("button");
       bouton.className = "catalogue-item";
 

@@ -1,16 +1,22 @@
-// Propositions d'agencement : un plan peut avoir plusieurs propositions de
-// disposition des meubles, chacune avec sa propre liste de meubles
-// indépendante. Le blueprint et l'habillage restent communs à toutes les
-// propositions — voir documentation/16-propositions.md.
+// Propositions d'agencement : une proposition est définie au niveau du
+// PROJET (voir js/projets.js), partagée par tous ses plans (étages d'un
+// même lieu) — une proposition du même nom (ex. "Option A") retrouvée sur
+// chaque plan désigne la MÊME proposition, avec sa propre disposition de
+// meubles par plan (`meublesParPlan[planId]`). Le blueprint et l'habillage
+// restent propres à chaque plan.
 //
-// Bascule : Meubles.liste est toujours la liste de la proposition ACTIVE.
-// Au changement de proposition, on recopie Meubles.liste vers la
-// proposition qu'on quitte (_sauvegarderMeublesCourante), puis on recharge
-// Meubles avec la liste de la proposition qu'on active (Meubles.charger(...)).
+// Bascule : Meubles.liste est toujours la liste de la proposition ACTIVE
+// pour le plan affiché (`Propositions.planId`). Au changement de
+// proposition ou de plan, on recopie Meubles.liste vers
+// meublesParPlan[planId] de la proposition qu'on quitte
+// (_sauvegarderMeublesCourante), puis on recharge Meubles avec les meubles
+// de la proposition qu'on active pour ce plan (vide si elle n'a encore rien
+// sur ce plan).
 const Propositions = {
 
-  liste: [], // [{ id, nom, meubles: [] }]
+  liste: [], // [{ id, nom, meublesParPlan: { [planId]: [] } }]
   courante: null,
+  planId: null, // id (ou fichier) du plan actuellement affiché
   label: null, // <span>, barre d'outils : nom (lecture seule) de la proposition active
   listeConteneur: null, // <div>, menu kebab : un bouton par proposition pour basculer
   fermerMenu: null, // callback fourni par app.js pour refermer le menu kebab après sélection
@@ -30,25 +36,50 @@ const Propositions = {
     this.ecouteurs.forEach((callback) => callback());
   },
 
-  // Recopie la liste de meubles courante dans le projet avant sauvegarde/export
-  // (Meubles.liste peut avoir changé depuis la dernière bascule de proposition).
+  // Charge les propositions du PROJET donné — une seule fois, à son
+  // ouverture (voir js/app.js, ouvrirProjet), pas à chaque changement de
+  // plan. Crée une proposition par défaut si le projet n'en a encore aucune.
+  async chargerProjet(projetId) {
+    PropositionsStockage.init(projetId);
+    const liste = await PropositionsStockage.charger();
+    this.liste = (liste && liste.length)
+      ? liste.map((p) => ({ ...p, meublesParPlan: p.meublesParPlan || {} }))
+      : [{ id: crypto.randomUUID(), nom: I18n.t("app.proposition_defaut", { n: 1 }), meublesParPlan: {} }];
+    this.courante = null;
+    this.planId = null;
+  },
+
+  // Affiche, pour le plan donné, la proposition active — garde la même
+  // proposition (par id) qu'on affichait sur le plan précédent si elle
+  // existe encore, sinon la première de la liste. Recharge Meubles avec les
+  // meubles de cette proposition SUR CE PLAN (vide si elle n'y a encore
+  // rien). Appelé à chaque ouverture/bascule de plan (voir js/app.js).
+  activerPourPlan(planId) {
+    this.planId = planId;
+    const proposition = (this.courante && this.liste.includes(this.courante)) ? this.courante : this.liste[0];
+    this._activer(proposition);
+  },
+
+  // Recopie Meubles.liste dans meublesParPlan[planId] de la proposition
+  // active, avant sauvegarde/export (Meubles.liste peut avoir changé depuis
+  // la dernière bascule de proposition/plan).
   synchroniser() {
     this._sauvegarderMeublesCourante();
   },
 
-  // Remplace intégralement la liste des propositions (import/restauration de
-  // projet). Crée une proposition par défaut si la liste est vide.
-  charger(liste) {
-    this.liste = (liste && liste.length)
-      ? liste.map((p) => ({ ...p, meubles: p.meubles || [] }))
-      : [{ id: crypto.randomUUID(), nom: I18n.t("app.proposition_defaut", { n: 1 }), meubles: [] }];
-    this._activer(this.liste[0]);
+  // Retire toute donnée liée à un plan supprimé, de TOUTES les propositions
+  // du projet (voir js/plans.js, supprimer()) — pas d'entrées orphelines.
+  purgerPlan(planId) {
+    if (!planId) return;
+    this.liste.forEach((p) => { delete p.meublesParPlan[planId]; });
+    PropositionsStockage.sauvegarder(this.liste);
   },
 
-  // Crée une nouvelle proposition et bascule dessus. `dupliquer` reprend la
-  // disposition (liste de meubles + position) de la proposition active comme
-  // point de départ (copie indépendante, nouveaux id) ; sinon proposition
-  // vide. Dans les deux cas modeleId reste inchangé : les prefabs du
+  // Crée une nouvelle proposition (au niveau du projet) et bascule dessus
+  // pour le plan courant. `dupliquer` reprend la disposition (liste de
+  // meubles + position) de la proposition active, SUR CE PLAN, comme point
+  // de départ (copie indépendante, nouveaux id) ; sinon proposition vide
+  // partout. Dans les deux cas modeleId reste inchangé : les prefabs du
   // catalogue restent partagés, seules les instances/positions sont propres
   // à chaque proposition — voir documentation/16-propositions.md.
   ajouter(nom, dupliquer) {
@@ -61,7 +92,7 @@ const Propositions = {
     const proposition = {
       id: crypto.randomUUID(),
       nom: nom || I18n.t("app.proposition_defaut", { n: this.liste.length + 1 }),
-      meubles
+      meublesParPlan: this.planId ? { [this.planId]: meubles } : {}
     };
     this._sauvegarderMeublesCourante();
     this.liste.push(proposition);
@@ -78,9 +109,10 @@ const Propositions = {
     this._notifier();
   },
 
-  // Supprime la proposition active et bascule sur une autre — appelée depuis
-  // la barre d'outils, confirmation déjà faite par l'appelant. Refuse de
-  // supprimer la dernière proposition restante (il en faut toujours au moins une).
+  // Supprime la proposition active DU PROJET ENTIER (tous les plans) et
+  // bascule sur une autre pour le plan courant — appelée depuis la barre
+  // d'outils, confirmation déjà faite par l'appelant. Refuse de supprimer
+  // la dernière proposition restante (il en faut toujours au moins une).
   supprimer() {
     if (!this.courante || this.liste.length <= 1) return;
 
@@ -100,12 +132,12 @@ const Propositions = {
   },
 
   _sauvegarderMeublesCourante() {
-    if (this.courante) this.courante.meubles = Meubles.liste;
+    if (this.courante && this.planId) this.courante.meublesParPlan[this.planId] = Meubles.liste;
   },
 
   _activer(proposition) {
     this.courante = proposition;
-    Meubles.charger(proposition.meubles);
+    Meubles.charger(proposition.meublesParPlan[this.planId] || []);
     this._actualiserAffichage();
     Statut.definir(I18n.t("propositions.active", { nom: proposition.nom }));
     this._notifier();

@@ -1,33 +1,43 @@
 // Couche de données du choix de plan (voir documentation/20-plans.md).
-// Un "plan" = un Projet complet (voir js/app.js, construireProjet()),
-// choisi au démarrage sur l'écran d'accueil (js/selecteur-plans.js). Sert
-// aussi à représenter les étages d'un même lieu (un plan par étage).
+// Un "plan" = un Plan complet (voir js/app.js, construireProjet()), choisi
+// une fois un projet ouvert (voir js/projets.js) sur l'écran de choix
+// (js/selecteur-plans.js). Représente un étage d'un même lieu (le
+// "projet") — plusieurs plans d'un même projet partagent son catalogue
+// (voir js/catalogue-stockage.js).
 //
 // Deux modes, détectés automatiquement, jamais mélangés, tous deux en CRUD
-// complet depuis l'écran d'accueil :
-// - MODE_LOCAL (ouverture en file://) : plans stockés dans localStorage.
+// complet depuis l'écran de choix. Toujours SCOPÉS au projet courant
+// (`Plans.projetId`, fixé par init()) :
+// - MODE_LOCAL (ouverture en file://) : plans stockés dans localStorage,
+//   sous des clés préfixées par l'id du projet.
 // - MODE_FICHIERS (servi en http/https) : plans = fichiers .json du
-//   dossier plans/, lus/écrits via les scripts PHP du même dossier
-//   (liste.php, sauvegarder.php, renommer.php, supprimer.php) — nécessite
-//   un hébergement compatible PHP.
+//   dossier projets/<projetId>/plans/, lus/écrits via les scripts PHP
+//   préfixés `plan-` du dossier php/ — nécessite un hébergement compatible
+//   PHP.
 const Plans = {
 
   MODE_LOCAL: "local",
   MODE_FICHIERS: "fichiers",
 
-  CLE_INDEX: "planner-plans",
-  PREFIXE_PLAN: "planner-plan-",
-  CLE_DERNIER: "planner-dernier-plan",
-
+  projetId: null,
   mode: null,
+  _alerteEchecAffichee: false, // évite de spammer alert() à chaque édition tant que le stockage reste plein
 
-  init() {
+  init(projetId) {
     this.mode = location.protocol === "file:" ? this.MODE_LOCAL : this.MODE_FICHIERS;
-    if (this.mode === this.MODE_LOCAL) this._migrerAncienneSauvegarde();
+    this.projetId = projetId;
     return this.mode;
   },
 
-  // Liste légère (sans l'image du blueprint) pour les cartes de l'écran d'accueil.
+  _cleIndex() {
+    return `planner-plans-${this.projetId}`;
+  },
+
+  _clePlan(id) {
+    return `planner-plan-${this.projetId}-${id}`;
+  },
+
+  // Liste légère (sans l'image du blueprint) pour les cartes de l'écran de choix.
   async lister() {
     return this.mode === this.MODE_LOCAL ? this._listerLocal() : this._listerFichiers();
   },
@@ -64,45 +74,19 @@ const Plans = {
       : this._renommerFichier(plan.fichier, nom);
   },
 
+  // Purge aussi les données de ce plan dans les propositions du projet
+  // (`meublesParPlan[planId]`, voir js/propositions.js) — pas d'entrées
+  // orphelines une fois le plan supprimé.
   supprimer(plan) {
+    Propositions.purgerPlan(plan.id || plan.fichier);
     return this.mode === this.MODE_LOCAL
       ? this._supprimerLocal(plan.id)
       : this._supprimerFichier(plan.fichier);
   },
 
-  // Dernier plan ouvert (n'importe quel mode) : permet de bypasser l'écran
-  // de choix au démarrage (voir js/app.js, demarrerSelectionPlan).
-  // Mémorisé seulement une fois qu'un blueprint est réellement chargé/
-  // sauvegardé (pas pour un plan "nouveau" encore vide), pour ne jamais
-  // pointer vers un plan qui échouerait au rechargement.
-  memoriserDernier(plan) {
-    try {
-      const id = plan && (plan.id || plan.fichier);
-      if (id) localStorage.setItem(this.CLE_DERNIER, id);
-    } catch (erreur) {
-      // silencieux
-    }
-  },
-
-  dernierPlanId() {
-    try {
-      return localStorage.getItem(this.CLE_DERNIER);
-    } catch (erreur) {
-      return null;
-    }
-  },
-
-  oublierDernier() {
-    try {
-      localStorage.removeItem(this.CLE_DERNIER);
-    } catch (erreur) {
-      // silencieux
-    }
-  },
-
   _lireIndex() {
     try {
-      return JSON.parse(localStorage.getItem(this.CLE_INDEX)) || [];
+      return JSON.parse(localStorage.getItem(this._cleIndex())) || [];
     } catch (erreur) {
       return [];
     }
@@ -110,7 +94,7 @@ const Plans = {
 
   _ecrireIndex(index) {
     try {
-      localStorage.setItem(this.CLE_INDEX, JSON.stringify(index));
+      localStorage.setItem(this._cleIndex(), JSON.stringify(index));
     } catch (erreur) {
       console.warn("Index des plans non sauvegardé :", erreur);
     }
@@ -118,35 +102,40 @@ const Plans = {
 
   _listerLocal() {
     return this._lireIndex()
-      .map((entree) => {
-        const projet = this._chargerLocal(entree.id);
-        return {
-          id: entree.id,
-          nom: entree.nom || entree.id,
-          propositions: (projet && projet.propositions || []).map((p) => p.nom),
-          modifie: entree.modifie || 0
-        };
-      })
+      .map((entree) => ({
+        id: entree.id,
+        nom: entree.nom || entree.id,
+        modifie: entree.modifie || 0
+      }))
       .sort((a, b) => b.modifie - a.modifie);
   },
 
   _chargerLocal(id) {
     try {
-      return JSON.parse(localStorage.getItem(this.PREFIXE_PLAN + id));
+      return JSON.parse(localStorage.getItem(this._clePlan(id)));
     } catch (erreur) {
       return null;
     }
   },
 
+  // En cas d'échec (le plus souvent : quota localStorage dépassé, ex.
+  // beaucoup de plans avec blueprint dans ce navigateur), alerte
+  // immédiatement au lieu d'échouer en silence — sinon le plan a l'air de se
+  // sauvegarder normalement pendant toute l'édition, et l'échec ne se
+  // découvre qu'au rechargement suivant ("impossible de charger ce plan").
   _sauvegarderLocal(id, projet) {
     try {
-      localStorage.setItem(this.PREFIXE_PLAN + id, JSON.stringify(projet));
+      localStorage.setItem(this._clePlan(id), JSON.stringify(projet));
       const index = this._lireIndex();
       const entree = index.find((s) => s.id === id);
       if (entree) entree.modifie = Date.now();
       this._ecrireIndex(index);
     } catch (erreur) {
       console.warn("Sauvegarde de plan impossible :", erreur);
+      if (!this._alerteEchecAffichee) {
+        this._alerteEchecAffichee = true;
+        alert(I18n.t("app.sauvegarde_plan_echec", { erreur: erreur && erreur.message ? erreur.message : erreur }));
+      }
     }
   },
 
@@ -160,33 +149,18 @@ const Plans = {
 
   _supprimerLocal(id) {
     this._ecrireIndex(this._lireIndex().filter((s) => s.id !== id));
-    localStorage.removeItem(this.PREFIXE_PLAN + id);
-  },
-
-  // Migration ponctuelle : reprend l'ancienne sauvegarde mono-plan
-  // (clé "planner-projet", voir js/stockage.js) comme premier plan, si
-  // l'index multi-plans n'existe pas encore. Ne supprime pas l'ancienne
-  // clé (filet de sécurité, coût négligeable).
-  _migrerAncienneSauvegarde() {
-    if (localStorage.getItem(this.CLE_INDEX)) return;
-    const ancien = Stockage.charger();
-    if (!ancien) return;
-    const id = ancien.id || crypto.randomUUID();
-    ancien.id = id;
-    localStorage.setItem(this.PREFIXE_PLAN + id, JSON.stringify(ancien));
-    this._ecrireIndex([{ id, nom: "Plan 1", modifie: Date.now() }]);
+    localStorage.removeItem(this._clePlan(id));
   },
 
   async _listerFichiers() {
     try {
-      const reponse = await fetch("plans/liste.php");
+      const reponse = await fetch(`php/plan-liste.php?projet=${encodeURIComponent(this.projetId)}`);
       if (!reponse.ok) return [];
       const liste = await reponse.json();
       return liste.map((s) => ({
         id: s.fichier,
         fichier: s.fichier,
         nom: s.nom || s.id || s.fichier,
-        propositions: s.propositions || [],
         modifie: (s.modifie || 0) * 1000
       }));
     } catch (erreur) {
@@ -196,7 +170,7 @@ const Plans = {
 
   async _chargerFichier(fichier) {
     try {
-      const reponse = await fetch("plans/" + encodeURIComponent(fichier));
+      const reponse = await fetch(`projets/${encodeURIComponent(this.projetId)}/plans/${encodeURIComponent(fichier)}`);
       if (!reponse.ok) return null;
       return await reponse.json();
     } catch (erreur) {
@@ -204,12 +178,12 @@ const Plans = {
     }
   },
 
-  // Best-effort, silencieuses : plans/*.php côté serveur, Stockage
+  // Best-effort, silencieuses : php/plan-*.php côté serveur, Stockage
   // (localStorage) reste le filet de sécurité en mode fichiers aussi.
   async _sauvegarderFichier(fichier, projet) {
     if (!fichier) return;
     try {
-      await fetch(`plans/sauvegarder.php?fichier=${encodeURIComponent(fichier)}`, {
+      await fetch(`php/plan-sauvegarder.php?projet=${encodeURIComponent(this.projetId)}&fichier=${encodeURIComponent(fichier)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(projet)
@@ -222,7 +196,7 @@ const Plans = {
   async _renommerFichier(fichier, nom) {
     if (!fichier) return;
     try {
-      await fetch(`plans/renommer.php?fichier=${encodeURIComponent(fichier)}&nom=${encodeURIComponent(nom)}`, { method: "POST" });
+      await fetch(`php/plan-renommer.php?projet=${encodeURIComponent(this.projetId)}&fichier=${encodeURIComponent(fichier)}&nom=${encodeURIComponent(nom)}`, { method: "POST" });
     } catch (erreur) {
       // silencieux
     }
@@ -231,7 +205,7 @@ const Plans = {
   async _supprimerFichier(fichier) {
     if (!fichier) return;
     try {
-      await fetch(`plans/supprimer.php?fichier=${encodeURIComponent(fichier)}`, { method: "POST" });
+      await fetch(`php/plan-supprimer.php?projet=${encodeURIComponent(this.projetId)}&fichier=${encodeURIComponent(fichier)}`, { method: "POST" });
     } catch (erreur) {
       // silencieux
     }

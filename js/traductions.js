@@ -13,10 +13,24 @@ const TRADUCTIONS = {
   "commun.non": { fr: `Non`, en: `No` },
   "commun.total": { fr: `Total`, en: `Total` },
 
+  // Écran de choix des projets
+  "projets.titre": { fr: `Projets`, en: `Projects` },
+  "projets.nouveau_bouton": { fr: `+ Nouveau projet`, en: `+ New project` },
+  "projets.n_plans": { fr: `{n} plan(s)`, en: `{n} plan(s)` },
+  "projets.aucun_plan": { fr: `Aucun plan pour l'instant`, en: `No plan yet` },
+  "projets.modifie_le": { fr: `Modifié le {date}`, en: `Modified on {date}` },
+  "projets.renommer_prompt": { fr: `Nouveau nom du projet :`, en: `New project name:` },
+  "projets.supprimer_confirm": { fr: `Supprimer définitivement le projet "{nom}" et tous ses plans ?`, en: `Permanently delete the project "{nom}" and all its plans?` },
+  "projets.nouveau_nom_prompt": { fr: `Nom du nouveau projet :`, en: `New project name:` },
+  "projets.nouveau_nom_defaut": { fr: `Nouveau projet`, en: `New project` },
+  "barre.changer_projet_title": { fr: `Changer de projet`, en: `Switch project` },
+  "barre.projet_actuel_title": { fr: `Projet en cours`, en: `Current project` },
+
   // Écran de choix des plans / sidebar
   "plans.titre": { fr: `Plans`, en: `Plans` },
   "plans.nouveau_bouton": { fr: `+ Nouveau plan`, en: `+ New plan` },
-  "plans.aucune_proposition": { fr: `Aucune proposition pour l'instant`, en: `No proposal yet` },
+  "plans.importer_bouton": { fr: `Importer un projet`, en: `Import a project` },
+  "app.plans_importes_projet": { fr: `{n} plan(s) importé(s) dans ce projet.`, en: `{n} plan(s) imported into this project.` },
   "plans.modifie_le": { fr: `Modifié le {date}`, en: `Modified on {date}` },
   "plans.renommer_prompt": { fr: `Nouveau nom du plan :`, en: `New plan name:` },
   "plans.supprimer_confirm": { fr: `Supprimer définitivement le plan "{nom}" ?`, en: `Permanently delete the plan "{nom}"?` },
@@ -37,11 +51,12 @@ const TRADUCTIONS = {
   "langue.bouton_title": { fr: `Changer de langue / Switch language`, en: `Changer de langue / Switch language` },
 
   // Menu "Plan et propositions"
-  "menu.renommer_proposition": { fr: `Renommer la proposition active`, en: `Rename the active proposal` },
-  "menu.supprimer_proposition": { fr: `Supprimer la proposition active`, en: `Delete the active proposal` },
+  "menu.renommer_proposition": { fr: `Renommer la proposition`, en: `Rename the proposal` },
+  "menu.supprimer_proposition": { fr: `Supprimer la proposition`, en: `Delete the proposal` },
   "menu.ajouter_proposition": { fr: `Ajouter une proposition`, en: `Add a proposal` },
   "menu.ouvrir_projet": { fr: `Ouvrir un projet...`, en: `Open a project...` },
   "menu.exporter_projet": { fr: `Enregistrer sous...`, en: `Save as...` },
+  "menu.changer_projet": { fr: `Changer de projet`, en: `Switch project` },
 
   // Écran d'accueil (aucun blueprint)
   "accueil.aucun_blueprint": { fr: `Aucun blueprint importé.`, en: `No blueprint imported.` },
@@ -85,6 +100,8 @@ const TRADUCTIONS = {
 
   // Vue catalogue (plein écran)
   "catalogue_vue.titre": { fr: `Catalogue`, en: `Catalog` },
+  "catalogue_page.retour_planner_title": { fr: `Retour au planner`, en: `Back to planner` },
+  "catalogue_page.lien_depuis_plans": { fr: `Éditer le catalogue`, en: `Edit the catalog` },
   "catalogue_vue.importer_title": { fr: `Importer un catalogue (CSV)...`, en: `Import a catalog (CSV)...` },
   "catalogue_vue.exporter_title": { fr: `Exporter le catalogue (CSV)...`, en: `Export the catalog (CSV)...` },
   "catalogue_vue.imprimer_title": { fr: `Imprimer le détail du catalogue`, en: `Print catalog details` },
@@ -95,18 +112,24 @@ const TRADUCTIONS = {
   "catalogue_vue.th_profondeur": { fr: `Profondeur (cm)`, en: `Depth (cm)` },
   "catalogue_vue.th_hauteur": { fr: `Hauteur (cm)`, en: `Height (cm)` },
   "catalogue_vue.th_qte": { fr: `Qté`, en: `Qty` },
-  "catalogue_vue.th_a_demenager_title": { fr: `Objet à déménager (compté dans le volume total)`, en: `Object to be moved (counted in total volume)` },
-  "catalogue_vue.th_a_demenager": { fr: `À déménager`, en: `To be moved` },
   "catalogue_vue.th_volume": { fr: `Volume`, en: `Volume` },
+  "catalogue_vue.onglet_a_trier_title": { fr: `Objets pas encore complètement paramétrés : type toujours "Générique" et/ou largeur/profondeur manquantes`, en: `Objects not fully configured yet: still "Generic" type and/or missing width/depth` },
+  "catalogue_vue.onglet_a_trier": { fr: `À trier`, en: `To sort` },
+  "catalogue_vue.onglet_a_demenager": { fr: `Déménage`, en: `Moving` },
+  "catalogue_vue.onglet_non_a_demenager_title": { fr: `Type "Volume fixe" : passer un objet dans cet onglet se fait en changeant son type`, en: `"Fixed volume" type: move an item into this tab by changing its type` },
+  "catalogue_vue.onglet_non_a_demenager": { fr: `Sur place`, en: `Staying` },
+  "app.impression_th_volume_unitaire": { fr: `Volume unitaire`, en: `Unit volume` },
+  "app.impression_th_volume_total": { fr: `Volume total`, en: `Total volume` },
 
   // app.js : projet / plan / blueprint
   "app.blueprint_remplace": { fr: `Blueprint remplacé (échelle, origine, meubles et habillage conservés).`, en: `Blueprint replaced (scale, origin, furniture and décor kept).` },
   "app.blueprint_importe": { fr: `Blueprint importé avec une échelle par défaut (100px = 1m). Utilisez le bouton "Échelle" pour l'ajuster.`, en: `Blueprint imported with a default scale (100px = 1m). Use the "Scale" button to adjust it.` },
   "app.plan_impossible_charger": { fr: `Impossible de charger ce plan.`, en: `Unable to load this plan.` },
+  "app.sauvegarde_plan_echec": { fr: `Attention : la sauvegarde du plan a échoué. Vos derniers changements ne sont probablement pas enregistrés.\n\nRaison : {erreur}`, en: `Warning: saving the plan failed. Your latest changes are probably not saved.\n\nReason: {erreur}` },
   "app.plan_ouvert": { fr: `Plan ouvert : {nom}.`, en: `Plan opened: {nom}.` },
   "app.plan_nouveau_statut": { fr: `Nouveau plan : importez un blueprint pour commencer.`, en: `New plan: import a blueprint to get started.` },
-  "app.plans_exportes": { fr: `{n} plan(s) exporté(s) : {nom}.json.`, en: `{n} plan(s) exported: {nom}.json.` },
-  "app.plans_importes": { fr: `{n} plan(s) importé(s).`, en: `{n} plan(s) imported.` },
+  "app.projet_exporte": { fr: `Projet "{projet}" exporté ({n} plan(s)) : {nom}.json.`, en: `Project "{projet}" exported ({n} plan(s)): {nom}.json.` },
+  "app.projet_importe": { fr: `Projet "{projet}" importé ({n} plan(s)).`, en: `Project "{projet}" imported ({n} plan(s)).` },
   "app.plan_importe_defaut": { fr: `Plan importé {n}`, en: `Imported plan {n}` },
   "app.fichier_illisible": { fr: `Impossible de lire le fichier.`, en: `Unable to read the file.` },
   "app.fichier_projet_invalide": { fr: `Fichier de projet invalide.`, en: `Invalid project file.` },
@@ -115,7 +138,7 @@ const TRADUCTIONS = {
   "app.importer_blueprint_avant_projet": { fr: `Importez d'abord un blueprint avant d'enregistrer un projet.`, en: `Import a blueprint first before saving a project.` },
   "app.ajouter_meuble_title_edition": { fr: `Choisir/ajouter un meuble`, en: `Choose/add a furniture item` },
   "app.ajouter_meuble_title_clean": { fr: `Ajouter un masque`, en: `Add a mask` },
-  "app.nom_fichier_plans_prompt": { fr: `Nom du fichier ({n} plan(s)) :`, en: `File name ({n} plan(s)):` },
+  "app.nom_fichier_projet_prompt": { fr: `Nom du fichier (projet "{projet}", {n} plan(s)) :`, en: `File name (project "{projet}", {n} plan(s)):` },
   "app.nom_proposition_prompt": { fr: `Nom de la nouvelle proposition :`, en: `Name of the new proposal:` },
   "app.proposition_defaut": { fr: `Proposition {n}`, en: `Proposal {n}` },
   "app.dupliquer_disposition_confirm": { fr: `Partir de la disposition actuelle de la proposition active ?\n\nOK = dupliquer ses meubles déjà posés (positions incluses)\nAnnuler = partir d'un plan vide`, en: `Start from the active proposal's current layout?\n\nOK = duplicate its already placed furniture (including positions)\nCancel = start from an empty plan` },
@@ -142,14 +165,18 @@ const TRADUCTIONS = {
   // Import du blueprint (js/blueprint.js)
   "blueprint.fichier_non_supporte": { fr: `Fichier non supporté : merci de choisir une image JPG ou PNG.`, en: `Unsupported file: please choose a JPG or PNG image.` },
   "blueprint.image_invalide": { fr: `Fichier image invalide.`, en: `Invalid image file.` },
+  "blueprint.chemin_local_introuvable": { fr: `Image introuvable à l'emplacement attendu : {chemin}\n\nCopiez d'abord ce fichier à cet endroit (à côté de index.html), sous le même nom, puis réessayez.`, en: `Image not found at the expected location: {chemin}\n\nFirst copy this file there (next to index.html), keeping the same name, then try again.` },
+  "blueprint.televersement_echec": { fr: `Échec du téléversement de l'image sur le serveur.`, en: `Failed to upload the image to the server.` },
 
   // Catalogue (panneau + vue d'édition)
   "catalogue.objet_cree": { fr: `Objet créé dans le catalogue : {nom}. Configurez-le puis choisissez-le pour le poser.`, en: `Object created in the catalog: {nom}. Configure it, then choose it to place it.` },
   "catalogue.nom_nouvel_objet_prompt": { fr: `Nom du nouvel objet (ex. "Canapé du salon") :`, en: `Name of the new object (e.g. "Living room sofa"):` },
   "catalogue.aucun_objet": { fr: `Aucun objet pour l'instant.`, en: `No object yet.` },
+  "catalogue_vue.onglet_a_trier_vide": { fr: `Aucun objet à trier.`, en: `No object to sort.` },
+  "catalogue_vue.onglet_a_demenager_vide": { fr: `Aucun objet à déménager.`, en: `No object to be moved.` },
+  "catalogue_vue.onglet_non_a_demenager_vide": { fr: `Aucun objet sur place.`, en: `No object staying in place.` },
   "edition_catalogue.description_placeholder": { fr: `Notes, marque, lieu d'achat...`, en: `Notes, brand, place of purchase...` },
   "edition_catalogue.quantite_title": { fr: `Nombre d'instances posées sur le plan (dupliquer un meuble compte comme le même modèle)`, en: `Number of instances placed on the plan (duplicating a furniture item counts as the same model)` },
-  "edition_catalogue.a_demenager_title": { fr: `Objet à déménager (à décocher pour un objet acheté sur place ou un volume fixe, ex. comptoir de cuisine) — exclu du volume total si décoché`, en: `Object to be moved (uncheck for an object bought on site or a fixed volume, e.g. kitchen counter) — excluded from total volume if unchecked` },
   "edition_catalogue.supprimer_title": { fr: `Supprimer du catalogue`, en: `Remove from the catalog` },
   "edition_catalogue.supprimer_confirm": { fr: `Supprimer "{nom}" du catalogue ?`, en: `Delete "{nom}" from the catalog?` },
 
@@ -185,9 +212,6 @@ const TRADUCTIONS = {
   "objets.type_change": { fr: `Type changé : {libelle} -> {type}.`, en: `Type changed: {libelle} -> {type}.` },
   "objets.hauteur_reelle": { fr: `Hauteur réelle : {libelle} -> {valeur} cm.`, en: `Actual height: {libelle} -> {valeur} cm.` },
   "objets.non_definie": { fr: `non définie`, en: `not set` },
-  "objets.a_demenager_statut": { fr: `{libelle} -> {statut}.`, en: `{libelle} -> {statut}.` },
-  "objets.a_demenager_oui": { fr: `à déménager`, en: `to be moved` },
-  "objets.a_demenager_non": { fr: `non déménagé`, en: `not moved` },
   "objets.forme_changee": { fr: `Forme changée : {libelle} -> {forme}.`, en: `Shape changed: {libelle} -> {forme}.` },
   "objets.ordre_affichage_statut": { fr: `Ordre d'affichage : {libelle} -> {niveau}.`, en: `Display order: {libelle} -> {niveau}.` },
   "objets.duplique": { fr: `Dupliqué : {libelle}.`, en: `Duplicated: {libelle}.` },

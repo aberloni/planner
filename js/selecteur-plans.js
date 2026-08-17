@@ -6,13 +6,40 @@ const SelecteurPlans = {
   overlay: null,
   grille: null,
   boutonNouveau: null,
+  boutonImporter: null,
+  inputImporter: null,
   callback: null,
+  callbackImporter: null,
 
   init(elements) {
     this.overlay = elements.overlay;
     this.grille = elements.grille;
     this.boutonNouveau = elements.boutonNouveau;
     this.boutonNouveau.addEventListener("click", () => this._creerPlan());
+
+    // Importer des plans déjà exportés ailleurs (voir documentation/20-plans.md)
+    // dans le projet en cours, sans passer par "Ouvrir un projet..." (qui crée
+    // un nouveau projet quand le fichier est un paquet multi-plans).
+    this.boutonImporter = elements.boutonImporter;
+    this.inputImporter = elements.inputImporter;
+    this.boutonImporter.addEventListener("click", () => this.inputImporter.click());
+    this.inputImporter.addEventListener("change", () => {
+      const fichier = this.inputImporter.files[0];
+      if (fichier && this.callbackImporter) this.callbackImporter(fichier);
+      this.inputImporter.value = "";
+    });
+  },
+
+  // callback(fichier) appelé quand l'utilisateur choisit un fichier via
+  // "Importer des plans...".
+  alImporter(callback) {
+    this.callbackImporter = callback;
+  },
+
+  // Alias public de _rafraichir(), pour permettre à l'appelant (voir
+  // js/app.js) de remettre l'écran à jour après un import.
+  rafraichir() {
+    return this._rafraichir();
   },
 
   // Affiche l'écran avec la liste donnée ; `callback(plan)` est appelé au
@@ -46,12 +73,8 @@ const SelecteurPlans = {
     nom.textContent = plan.nom;
     carte.appendChild(nom);
 
-    const detail = document.createElement("div");
-    detail.className = "plan-carte-detail";
-    detail.textContent = plan.propositions.length
-      ? plan.propositions.join(", ")
-      : I18n.t("plans.aucune_proposition");
-    carte.appendChild(detail);
+    const pastilles = this._pastillesPropositions(plan);
+    if (pastilles) carte.appendChild(pastilles);
 
     if (plan.modifie) {
       const date = document.createElement("div");
@@ -64,6 +87,28 @@ const SelecteurPlans = {
     carte.appendChild(this._actions(plan));
 
     return carte;
+  },
+
+  // Une pastille par proposition du projet (voir js/propositions.js) ayant
+  // déjà des meubles SUR CE plan (`meublesParPlan[plan.id]`) — première
+  // lettre de son nom. Propositions.liste est déjà chargée (projet ouvert
+  // avant d'atteindre cet écran, voir js/app.js, ouvrirProjet), pas besoin
+  // de recharger quoi que ce soit ici.
+  _pastillesPropositions(plan) {
+    if (typeof Propositions === "undefined") return null;
+    const avecContenu = Propositions.liste.filter((p) => (p.meublesParPlan[plan.id] || []).length > 0);
+    if (!avecContenu.length) return null;
+
+    const conteneur = document.createElement("div");
+    conteneur.className = "plan-carte-pastilles";
+    avecContenu.forEach((proposition) => {
+      const pastille = document.createElement("span");
+      pastille.className = "plan-carte-pastille";
+      pastille.textContent = (proposition.nom || "?").trim().charAt(0).toUpperCase();
+      pastille.title = proposition.nom;
+      conteneur.appendChild(pastille);
+    });
+    return conteneur;
   },
 
   _actions(plan) {
