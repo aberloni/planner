@@ -436,14 +436,51 @@
     const nomParDefaut = `projet_${nomProjet.replace(/[^a-z0-9]+/gi, "_").toLowerCase() || "export"}`;
     const nom = prompt(I18n.t("app.nom_fichier_projet_prompt", { projet: nomProjet, n: plans.length }), nomParDefaut) || nomParDefaut;
     const paquet = { version: 1, projetNom: nomProjet, catalogue: Catalogue.liste, catalogueId: Catalogue.id, propositions: Propositions.liste, plans };
-    const blob = new Blob([JSON.stringify(paquet, null, 2)], { type: "application/json" });
+    telechargerJson(paquet, nom);
+    Statut.definir(I18n.t("app.projet_exporte", { projet: nomProjet, n: plans.length, nom }));
+  }
+
+  function telechargerJson(donnees, nom) {
+    const blob = new Blob([JSON.stringify(donnees, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const lien = document.createElement("a");
     lien.href = url;
     lien.download = `${nom}.json`;
     lien.click();
     URL.revokeObjectURL(url);
-    Statut.definir(I18n.t("app.projet_exporte", { projet: nomProjet, n: plans.length, nom }));
+  }
+
+  // Exporte un projet PAR SON ID depuis l'écran d'accueil (voir
+  // js/selecteur-projets.js, action "Exporter"), sans l'ouvrir — tout est lu
+  // directement depuis le stockage (aucun état en mémoire à reprendre,
+  // contrairement à exporterProjet() pour le projet couramment ouvert). Sans
+  // risque de re-scoper Plans/CatalogueStockage/PropositionsStockage : on
+  // est forcément sur l'écran d'accueil, donc aucun projet n'est ouvert.
+  async function exporterProjetParId(projet) {
+    Plans.init(projet.id);
+    CatalogueStockage.init(projet.id);
+    PropositionsStockage.init(projet.id);
+
+    const donneesCatalogue = await CatalogueStockage.charger();
+    const liste = await Plans.lister();
+    const plans = [];
+    for (const plan of liste) {
+      const donneesPlan = await Plans.charger(plan);
+      if (donneesPlan) plans.push(donneesPlan);
+    }
+    const propositions = await PropositionsStockage.charger();
+
+    const nomParDefaut = `projet_${projet.nom.replace(/[^a-z0-9]+/gi, "_").toLowerCase() || "export"}`;
+    const nom = prompt(I18n.t("app.nom_fichier_projet_prompt", { projet: projet.nom, n: plans.length }), nomParDefaut) || nomParDefaut;
+    const paquet = {
+      version: 1,
+      projetNom: projet.nom,
+      catalogue: donneesCatalogue ? donneesCatalogue.catalogue : [],
+      catalogueId: donneesCatalogue ? donneesCatalogue.id : null,
+      propositions,
+      plans
+    };
+    telechargerJson(paquet, nom);
   }
 
   // Persiste un plan importé (nouvelle entrée) sans l'ouvrir, pour
@@ -464,8 +501,12 @@
   // projet (jamais d'écrasement d'un projet existant), y installe son
   // catalogue, persiste chaque plan comme nouvelle entrée, puis ouvre le
   // premier — symétrique de l'export, un projet importé reste indépendant
-  // de tout projet déjà présent.
+  // de tout projet déjà présent. Appelable aussi bien depuis l'écran
+  // d'accueil (aucun projet ouvert, voir importerFichierProjetDepuisAccueil)
+  // que depuis le menu d'un projet déjà ouvert (voir importerFichierProjet)
+  // — masquer() est sans effet si l'écran de choix de projet n'est pas affiché.
   async function importerPaquetPlans(paquet) {
+    SelecteurProjets.masquer();
     const nomProjet = paquet.projetNom || I18n.t("projets.nouveau_nom_defaut");
     const nouveauProjet = Projets.creer(nomProjet);
 
@@ -543,6 +584,27 @@
           return;
         }
         appliquerProjet(projet, I18n.t("app.projet_ouvert_fichier"));
+      } catch (erreur) {
+        alert(I18n.t("app.fichier_projet_invalide"));
+      }
+    };
+    lecteur.readAsText(fichier);
+  }
+
+  // Importe un projet complet depuis l'écran d'accueil (voir
+  // js/selecteur-projets.js, "Importer un projet...") — AUCUN projet ouvert
+  // à ce stade, donc seul le format "paquet multi-plans" (produit par
+  // exporterProjet()) a un sens ici ; contrairement à importerFichierProjet
+  // (menu d'un projet déjà ouvert), pas de repli sur le format historique
+  // "plan isolé", qui suppose justement un projet déjà ouvert pour l'accueillir.
+  function importerFichierProjetDepuisAccueil(fichier) {
+    const lecteur = new FileReader();
+    lecteur.onerror = () => alert(I18n.t("app.fichier_illisible"));
+    lecteur.onload = () => {
+      try {
+        const projet = JSON.parse(lecteur.result);
+        if (!Array.isArray(projet.plans)) throw new Error("format invalide");
+        importerPaquetPlans(projet);
       } catch (erreur) {
         alert(I18n.t("app.fichier_projet_invalide"));
       }
@@ -930,8 +992,12 @@
   SelecteurProjets.init({
     overlay: document.getElementById("vue-projets"),
     grille: document.getElementById("projets-grille"),
-    boutonNouveau: document.getElementById("projet-nouveau")
+    boutonNouveau: document.getElementById("projet-nouveau"),
+    boutonImporter: document.getElementById("projets-importer"),
+    inputImporter: document.getElementById("input-fichier-projets-importer")
   });
+  SelecteurProjets.alImporter((fichier) => importerFichierProjetDepuisAccueil(fichier));
+  SelecteurProjets.alExporter((projet) => exporterProjetParId(projet));
 
   SelecteurPlans.init({
     overlay: document.getElementById("vue-plans"),

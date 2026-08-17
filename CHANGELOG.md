@@ -1,6 +1,9 @@
 # Changelog
 
 ## 2026-08-17
+- Filigrane de version plus visible (opacité 0.5 → 0.85, couleur assombrie).
+- Fix : filigrane de version invisible sur les écrans de choix de projet/plan et la vue catalogue (z-index inférieur à ces overlays) — remonté au-dessus de tout.
+- Écran d'accueil : nouveau bouton "Importer un projet..." (crée et ouvre directement un nouveau projet depuis un fichier déjà exporté, sans avoir à en ouvrir un d'abord) et action "Exporter" sur chaque carte projet (sans avoir à l'ouvrir).
 - Sidebar des plans : nombre d'éléments placés (proposition active) affiché à côté du nom de chaque plan.
 - Fix : nouvel objet (meuble ou masque) placé au centre géométrique du viewBox, qui pouvait tomber sous les contrôles de zoom/boutons ronds flottants — placé maintenant au centre de la zone réellement visible.
 - Fix : impression du catalogue depuis l'écran de choix de plan (sans plan ouvert) affichait une liste vide — imprime maintenant tous les objets "Déménage" du catalogue (posés ou non, tous plans confondus), avec volumes et totaux.

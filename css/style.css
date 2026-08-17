@@ -83,11 +83,11 @@ body.mesure-exclusive #inspecteur {
   bottom: 4px;
   font-family: system-ui, sans-serif;
   font-size: 11px;
-  color: #999;
-  opacity: 0.5;
+  color: #666;
+  opacity: 0.85;
   pointer-events: none;
   user-select: none;
-  z-index: 1;
+  z-index: 9999;
 }
 
 @media print {
@@ -1151,6 +1151,12 @@ body.choix-plan #vue-plans {
 .plan-carte-date {
   color: #adb5bd;
   font-size: 12px;
+}
+
+/* Cartes projet : une action de plus (Exporter) que les cartes plan —
+   plus de place réservée pour ne pas chevaucher le nom. */
+#projets-grille .plan-carte-nom {
+  padding-right: 70px;
 }
 
 .plan-carte-pastilles {

@@ -7,12 +7,36 @@ const SelecteurProjets = {
   grille: null,
   boutonNouveau: null,
   callback: null,
+  callbackImporter: null,
+  callbackExporter: null,
 
   init(elements) {
     this.overlay = elements.overlay;
     this.grille = elements.grille;
     this.boutonNouveau = elements.boutonNouveau;
     this.boutonNouveau.addEventListener("click", () => this._creerProjet());
+
+    // Importer un projet complet déjà exporté ailleurs (voir
+    // js/app.js, exporterProjet()) sans avoir à en ouvrir un d'abord.
+    this.boutonImporter = elements.boutonImporter;
+    this.inputImporter = elements.inputImporter;
+    this.boutonImporter.addEventListener("click", () => this.inputImporter.click());
+    this.inputImporter.addEventListener("change", () => {
+      const fichier = this.inputImporter.files[0];
+      if (fichier && this.callbackImporter) this.callbackImporter(fichier);
+      this.inputImporter.value = "";
+    });
+  },
+
+  // callback(fichier) appelé quand l'utilisateur choisit un fichier via
+  // "Importer un projet...".
+  alImporter(callback) {
+    this.callbackImporter = callback;
+  },
+
+  // callback(projet) appelé au clic sur l'action "Exporter" d'une carte.
+  alExporter(callback) {
+    this.callbackExporter = callback;
   },
 
   // Affiche l'écran avec la liste donnée ; `callback(projet)` est appelé au
@@ -69,6 +93,16 @@ const SelecteurProjets = {
   _actions(projet) {
     const actions = document.createElement("div");
     actions.className = "plan-carte-actions";
+
+    const exporter = document.createElement("button");
+    exporter.type = "button";
+    exporter.title = I18n.t("projets.exporter_title");
+    exporter.innerHTML = '<img class="barre-icone" src="icones/ui/enregistrer.svg" alt="">';
+    exporter.addEventListener("click", (evenement) => {
+      evenement.stopPropagation();
+      if (this.callbackExporter) this.callbackExporter(projet);
+    });
+    actions.appendChild(exporter);
 
     const renommer = document.createElement("button");
     renommer.type = "button";

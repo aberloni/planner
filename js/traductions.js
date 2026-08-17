@@ -23,6 +23,7 @@ const TRADUCTIONS = {
   "projets.supprimer_confirm": { fr: `Supprimer définitivement le projet "{nom}" et tous ses plans ?`, en: `Permanently delete the project "{nom}" and all its plans?` },
   "projets.nouveau_nom_prompt": { fr: `Nom du nouveau projet :`, en: `New project name:` },
   "projets.nouveau_nom_defaut": { fr: `Nouveau projet`, en: `New project` },
+  "projets.exporter_title": { fr: `Exporter ce projet...`, en: `Export this project...` },
   "barre.changer_projet_title": { fr: `Changer de projet`, en: `Switch project` },
   "barre.projet_actuel_title": { fr: `Projet en cours`, en: `Current project` },
 
@@ -30,6 +31,7 @@ const TRADUCTIONS = {
   "plans.titre": { fr: `Plans`, en: `Plans` },
   "plans.nouveau_bouton": { fr: `+ Nouveau plan`, en: `+ New plan` },
   "plans.importer_bouton": { fr: `Importer un projet`, en: `Import a project` },
+  "projets.importer_bouton": { fr: `Importer un projet...`, en: `Import a project...` },
   "app.plans_importes_projet": { fr: `{n} plan(s) importé(s) dans ce projet.`, en: `{n} plan(s) imported into this project.` },
   "plans.modifie_le": { fr: `Modifié le {date}`, en: `Modified on {date}` },
   "plans.renommer_prompt": { fr: `Nouveau nom du plan :`, en: `New plan name:` },
