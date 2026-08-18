@@ -444,11 +444,24 @@
     Propositions.synchroniser();
 
     const nomProjet = projetActuel ? projetActuel.nom : "";
-    const nomParDefaut = `projet_${nomProjet.replace(/[^a-z0-9]+/gi, "_").toLowerCase() || "export"}`;
-    const nom = prompt(I18n.t("app.nom_fichier_projet_prompt", { projet: nomProjet, n: plans.length }), nomParDefaut) || nomParDefaut;
+    const nomParDefaut = `${nomProjet.replace(/[^a-z0-9]+/gi, "_").toLowerCase() || "export"}_${horodatageFichier()}`;
+    const saisie = prompt(I18n.t("app.nom_fichier_projet_prompt", { projet: nomProjet, n: plans.length }), nomParDefaut);
+    if (saisie === null) {
+      Statut.definir(I18n.t("app.export_annule"));
+      return;
+    }
+    const nom = saisie || nomParDefaut;
     const paquet = { version: 1, projetNom: nomProjet, catalogue: Catalogue.liste, catalogueId: Catalogue.id, propositions: Propositions.liste, plans };
     telechargerJson(paquet, nom);
     Statut.definir(I18n.t("app.projet_exporte", { projet: nomProjet, n: plans.length, nom }));
+  }
+
+  // Horodatage compact pour les noms de fichiers d'export par défaut
+  // (AAAA-MM-JJ_HH-MM), pour distinguer plusieurs exports du même projet.
+  function horodatageFichier() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}-${pad(d.getMinutes())}`;
   }
 
   function telechargerJson(donnees, nom) {
@@ -481,8 +494,13 @@
     }
     const propositions = await PropositionsStockage.charger();
 
-    const nomParDefaut = `projet_${projet.nom.replace(/[^a-z0-9]+/gi, "_").toLowerCase() || "export"}`;
-    const nom = prompt(I18n.t("app.nom_fichier_projet_prompt", { projet: projet.nom, n: plans.length }), nomParDefaut) || nomParDefaut;
+    const nomParDefaut = `${projet.nom.replace(/[^a-z0-9]+/gi, "_").toLowerCase() || "export"}_${horodatageFichier()}`;
+    const saisie = prompt(I18n.t("app.nom_fichier_projet_prompt", { projet: projet.nom, n: plans.length }), nomParDefaut);
+    if (saisie === null) {
+      Statut.definir(I18n.t("app.export_annule"));
+      return;
+    }
+    const nom = saisie || nomParDefaut;
     const paquet = {
       version: 1,
       projetNom: projet.nom,
@@ -706,8 +724,13 @@
       alert(I18n.t("app.catalogue_vide_exporter"));
       return;
     }
-    const nomParDefaut = `catalog_${Catalogue.id}`;
-    const nom = prompt(I18n.t("app.catalogue_nom_fichier_prompt"), nomParDefaut) || nomParDefaut;
+    const nomParDefaut = `catalogue_${horodatageFichier()}`;
+    const saisie = prompt(I18n.t("app.catalogue_nom_fichier_prompt"), nomParDefaut);
+    if (saisie === null) {
+      Statut.definir(I18n.t("app.export_annule"));
+      return;
+    }
+    const nom = saisie || nomParDefaut;
     // modele.largeur/hauteur sont déjà en cm (donnée brute, voir js/catalogue.js) :
     // aucune conversion d'échelle nécessaire à l'export.
     const lignes = [CSV_ENTETES, ...Catalogue.liste.map((modele) => [

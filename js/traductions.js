@@ -132,6 +132,7 @@ const TRADUCTIONS = {
   "app.plan_ouvert": { fr: `Plan ouvert : {nom}.`, en: `Plan opened: {nom}.` },
   "app.plan_nouveau_statut": { fr: `Nouveau plan : importez un blueprint pour commencer.`, en: `New plan: import a blueprint to get started.` },
   "app.projet_exporte": { fr: `Projet "{projet}" exporté ({n} plan(s)) : {nom}.json.`, en: `Project "{projet}" exported ({n} plan(s)): {nom}.json.` },
+  "app.export_annule": { fr: `Export annulé.`, en: `Export cancelled.` },
   "app.projet_importe": { fr: `Projet "{projet}" importé ({n} plan(s)).`, en: `Project "{projet}" imported ({n} plan(s)).` },
   "app.plan_importe_defaut": { fr: `Plan importé {n}`, en: `Imported plan {n}` },
   "app.fichier_illisible": { fr: `Impossible de lire le fichier.`, en: `Unable to read the file.` },

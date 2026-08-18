@@ -1,6 +1,8 @@
 # Changelog
 
 ## 2026-08-18
+- Fix : "Cancel" sur le prompt de nom de fichier (export projet/catalogue) exportait quand même avec le nom par défaut — n'exporte plus rien, message "Export annulé" à la place.
+- Export projet/catalogue : nom de fichier par défaut avec horodatage (`nom_AAAA-MM-JJ_HH-MM`) au lieu d'un UID, pour distinguer plusieurs exports.
 - Fix : import d'un projet complet (export depuis l'écran d'accueil) — les meubles/pastilles/comptes du catalogue devenaient invisibles après import (nouveaux id de plan générés, jamais remappés dans `meublesParPlan` des propositions).
 
 ## 2026-08-17
