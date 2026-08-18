@@ -66,6 +66,19 @@ body.mesure-exclusive #inspecteur {
   cursor: pointer;
 }
 
+@keyframes tourner {
+  to { transform: rotate(360deg); }
+}
+
+#btn-importer-blueprint.en-televersement .barre-icone {
+  animation: tourner 0.8s linear infinite;
+}
+
+#barre-outils button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .barre-icone {
   width: 18px;
   height: 18px;
@@ -1115,8 +1128,30 @@ body.choix-plan #vue-plans {
   padding: 48px 24px;
 }
 
+#vue-plans-entete {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+#btn-retour-projets {
+  padding: 6px 10px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  background: #fff;
+  color: #495057;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#btn-retour-projets:hover {
+  background: #f1f3f5;
+}
+
 #vue-plans-panneau h1 {
-  margin: 0 0 24px;
+  margin: 0;
   font-size: 22px;
 }
 

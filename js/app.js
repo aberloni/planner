@@ -42,6 +42,7 @@
   const btnChangerPlan = document.getElementById("btn-changer-plan");
   const labelPlanActuel = document.getElementById("label-plan-actuel");
   const btnEditerCatalogueDepuisPlans = document.getElementById("btn-editer-catalogue-plans");
+  const btnRetourProjets = document.getElementById("btn-retour-projets");
   const labelVueCatalogueProjet = document.getElementById("vue-catalogue-projet");
   const sidebarPlansFond = document.getElementById("sidebar-plans-fond");
   const sidebarPlansFermer = document.getElementById("sidebar-plans-fermer");
@@ -247,6 +248,12 @@
   }
 
   async function chargerFichierBlueprint(fichier) {
+    // Feedback pendant le téléversement (mode servi, voir js/blueprint.js) —
+    // peut prendre plusieurs secondes selon la taille de l'image/le réseau,
+    // sinon rien n'indique que l'import est en cours.
+    btnImporter.classList.add("en-televersement");
+    btnImporter.disabled = true;
+    Statut.definir(I18n.t("app.blueprint_televersement_en_cours"));
     try {
       const { chemin, largeurPx, hauteurPx } = await Blueprint.charger(fichier, { mode: Plans.mode });
 
@@ -287,6 +294,9 @@
       Statut.definir(I18n.t("app.blueprint_importe"));
     } catch (erreur) {
       alert(erreur.message);
+    } finally {
+      btnImporter.classList.remove("en-televersement");
+      btnImporter.disabled = false;
     }
   }
 
@@ -313,6 +323,7 @@
   // documentation/21-projets.md).
   async function demarrerSelectionProjet() {
     Projets.init();
+    if (Projets.mode === Projets.MODE_LOCAL) document.title += " (local)";
     const liste = await Projets.lister();
     const dernierId = Projets.dernierProjetId();
     const dernier = dernierId ? liste.find((p) => p.id === dernierId) : null;
@@ -1007,6 +1018,15 @@
     inputImporter: document.getElementById("input-fichier-plans-importer")
   });
   SelecteurPlans.alImporter((fichier) => importerPlansVersProjetCourant(fichier));
+
+  // Retour à l'écran de choix de projet, depuis l'écran de choix de plan —
+  // même principe que "Changer de projet" (sidebar, une fois un plan
+  // ouvert) : pas de mécanisme de retour en place pour les projets, on
+  // recharge simplement la page (rien n'est encore en cours d'édition ici).
+  btnRetourProjets.addEventListener("click", () => {
+    Projets.oublierDernier();
+    location.reload();
+  });
 
   // Sidebar (ancrée à gauche) : changer de plan sans revenir à l'écran
   // d'accueil ni recharger la page (voir js/sidebar-plans.js). Le plan en

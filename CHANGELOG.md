@@ -1,6 +1,8 @@
 # Changelog
 
 ## 2026-08-17
+- Écran de choix de plan : bouton "←" pour revenir à l'écran de choix de projet.
+- Import de blueprint (mode servi) : feedback visuel pendant le téléversement (icône qui tourne, bouton désactivé) — rien n'indiquait jusque-là que l'upload était en cours.
 - Filigrane de version plus visible (opacité 0.5 → 0.85, couleur assombrie).
 - Fix : filigrane de version invisible sur les écrans de choix de projet/plan et la vue catalogue (z-index inférieur à ces overlays) — remonté au-dessus de tout.
 - Écran d'accueil : nouveau bouton "Importer un projet..." (crée et ouvre directement un nouveau projet depuis un fichier déjà exporté, sans avoir à en ouvrir un d'abord) et action "Exporter" sur chaque carte projet (sans avoir à l'ouvrir).

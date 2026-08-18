@@ -2,10 +2,6 @@
 
 App web locale pour placer, déplacer et faire pivoter des meubles sur un plan de maison 2D — sans installation, sans backend, directement dans le navigateur.
 
-## Auteur
-
-Réalisé par Andres Berlonus.
-
 ## Contexte
 
 Projet personnel créé pour un besoin concret : tester des agencements de meubles sur un plan de maison avant un déménagement/aménagement réel, sans avoir à ouvrir un logiciel de CAO lourd. 
@@ -33,7 +29,7 @@ Projet personnel créé pour un besoin concret : tester des agencements de meubl
 - **Sessions** — écran de choix au démarrage, sauvegarde locale (`localStorage`) ou fichiers si servi via PHP.
 - **Export PNG** — cadre de sélection redimensionnable, export de la zone choisie en image.
 
-Documentation complète et historique de conception : [`documentation/README.md`](documentation/README.md).
+Documentation complète : [`documentation.md`](documentation.md).
 
 ## Icônes
 
@@ -41,7 +37,7 @@ Icônes fournies par [Iconify](https://iconify.design/).
 
 ## Lancer l'app
 
-Double-cliquer sur `index.html` (ou le glisser dans un onglet de navigateur). Voir [`documentation/08-lancement-local.md`](documentation/08-lancement-local.md) pour le mode "servi" (hébergement web + PHP, optionnel).
+Double-cliquer sur `index.html` (ou le glisser dans un onglet de navigateur). Voir [`documentation.md`](documentation.md) pour le mode "servi" (hébergement web + PHP, optionnel).
 
 ## Statut
 
@@ -50,3 +46,7 @@ Projet personnel, sans garantie, développé pour un usage perso. Contributions/
 ## Licence
 
 [MIT](LICENSE).
+
+---
+
+Réalisé par Andres Berlonus.

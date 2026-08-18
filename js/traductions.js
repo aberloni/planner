@@ -29,6 +29,7 @@ const TRADUCTIONS = {
 
   // Écran de choix des plans / sidebar
   "plans.titre": { fr: `Plans`, en: `Plans` },
+  "plans.retour_projets_title": { fr: `Retour aux projets`, en: `Back to projects` },
   "plans.nouveau_bouton": { fr: `+ Nouveau plan`, en: `+ New plan` },
   "plans.importer_bouton": { fr: `Importer un projet`, en: `Import a project` },
   "projets.importer_bouton": { fr: `Importer un projet...`, en: `Import a project...` },
@@ -169,6 +170,7 @@ const TRADUCTIONS = {
   "blueprint.image_invalide": { fr: `Fichier image invalide.`, en: `Invalid image file.` },
   "blueprint.chemin_local_introuvable": { fr: `Image introuvable à l'emplacement attendu : {chemin}\n\nCopiez d'abord ce fichier à cet endroit (à côté de index.html), sous le même nom, puis réessayez.`, en: `Image not found at the expected location: {chemin}\n\nFirst copy this file there (next to index.html), keeping the same name, then try again.` },
   "blueprint.televersement_echec": { fr: `Échec du téléversement de l'image sur le serveur.`, en: `Failed to upload the image to the server.` },
+  "app.blueprint_televersement_en_cours": { fr: `Téléversement du blueprint...`, en: `Uploading blueprint...` },
 
   // Catalogue (panneau + vue d'édition)
   "catalogue.objet_cree": { fr: `Objet créé dans le catalogue : {nom}. Configurez-le puis choisissez-le pour le poser.`, en: `Object created in the catalog: {nom}. Configure it, then choose it to place it.` },
