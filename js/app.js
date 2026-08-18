@@ -533,12 +533,30 @@
       PropositionsStockage.sauvegarder(Propositions.liste);
     }
 
+    // importerPlanSansOuvrir régénère un nouvel id/fichier par plan importé
+    // (jamais de réutilisation d'un id existant) : les clés de
+    // meublesParPlan (voir js/propositions.js) restent celles de l'ANCIEN
+    // plan tant qu'on ne les remappe pas ici, sinon les meubles importés
+    // deviennent orphelins (invisibles, catalogue à 0 instance).
+    const correspondanceIds = new Map();
     let premier = null;
     for (let i = 0; i < paquet.plans.length; i++) {
       const projet = paquet.plans[i];
+      const ancienId = projet.id;
       const cible = await importerPlanSansOuvrir(projet, I18n.t("app.plan_importe_defaut", { n: i + 1 }));
+      correspondanceIds.set(ancienId, cible.id || cible.fichier);
       if (i === 0) premier = { ...cible, nom: projet.nom };
     }
+
+    Propositions.liste.forEach((proposition) => {
+      const remappe = {};
+      Object.entries(proposition.meublesParPlan).forEach(([ancienId, meubles]) => {
+        const nouvelId = correspondanceIds.get(ancienId);
+        if (nouvelId) remappe[nouvelId] = meubles;
+      });
+      proposition.meublesParPlan = remappe;
+    });
+    PropositionsStockage.sauvegarder(Propositions.liste);
 
     projetActuel = nouveauProjet;
     labelProjetActuel.textContent = nouveauProjet.nom;

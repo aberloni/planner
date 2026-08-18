@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-08-18
+- Fix : import d'un projet complet (export depuis l'écran d'accueil) — les meubles/pastilles/comptes du catalogue devenaient invisibles après import (nouveaux id de plan générés, jamais remappés dans `meublesParPlan` des propositions).
+
 ## 2026-08-17
 - Écran de choix de plan : bouton "←" pour revenir à l'écran de choix de projet.
 - Import de blueprint (mode servi) : feedback visuel pendant le téléversement (icône qui tourne, bouton désactivé) — rien n'indiquait jusque-là que l'upload était en cours.
