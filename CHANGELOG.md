@@ -1,6 +1,8 @@
 # Changelog
 
 ## 2026-08-18
+- Écran de choix de plan : miniature du plan (capturée automatiquement, téléversée dans `imports/` comme les blueprints) sur chaque carte ; "?" si absente (mode local file://, pas d'écriture disque possible).
+- Fix : changer l'échelle du plan ne redimensionnait pas les meubles déjà posés (taille réelle en cm figée sur l'ancienne échelle) — recalcule maintenant leur taille écran depuis le catalogue à chaque recalibration.
 - Fix : "Cancel" sur le prompt de nom de fichier (export projet/catalogue) exportait quand même avec le nom par défaut — n'exporte plus rien, message "Export annulé" à la place.
 - Export projet/catalogue : nom de fichier par défaut avec horodatage (`nom_AAAA-MM-JJ_HH-MM`) au lieu d'un UID, pour distinguer plusieurs exports.
 - Fix : import d'un projet complet (export depuis l'écran d'accueil) — les meubles/pastilles/comptes du catalogue devenaient invisibles après import (nouveaux id de plan générés, jamais remappés dans `meublesParPlan` des propositions).

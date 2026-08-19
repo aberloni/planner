@@ -387,10 +387,29 @@ function creerModuleObjets(options) {
       return `${objet.libelle}\n${largeurCm} x ${profondeurCm} cm`;
     },
 
+    // Recalibration de l'échelle (px/cm) : pour les instances liées à un
+    // modèle du catalogue (modeleId), la taille réelle en cm (Catalogue) est
+    // la source de vérité — reconvertit en px avec la nouvelle échelle et
+    // redessine, sinon l'objet garde sa taille écran d'avant recalibration
+    // (donc une taille réelle fausse). Pour les objets sans modeleId
+    // (Habillage, sans notion de taille réelle), rien à recalculer.
     _actualiserToutesLesDimensions() {
+      const pxParCm = Echelle.pxParCm || Echelle.PX_PAR_CM_DEFAUT;
       this.liste.forEach((objet) => {
         const elements = this.elements.get(objet.id);
-        if (elements && elements.titre) elements.titre.textContent = this._texteDimensions(objet);
+        if (!elements) return;
+
+        if (objet.modeleId && typeof Catalogue !== "undefined") {
+          const modele = Catalogue.liste.find((m) => m.id === objet.modeleId);
+          if (modele && typeof modele.largeur === "number" && typeof modele.hauteur === "number") {
+            objet.largeur = modele.largeur * pxParCm;
+            objet.hauteur = modele.hauteur * pxParCm;
+            this._appliquerDimensions(elements.rect, objet);
+            this._repositionnerPoignee(objet);
+          }
+        }
+
+        if (elements.titre) elements.titre.textContent = this._texteDimensions(objet);
       });
     },
 

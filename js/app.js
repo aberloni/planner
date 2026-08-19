@@ -185,8 +185,47 @@
         origineY: Origine.definie ? Origine.decalageY : null
       },
       habillage: Habillage.liste,
-      cadreExport: CadreExport.cadre
+      cadreExport: CadreExport.cadre,
+      miniature: derniereMiniature
     };
+  }
+
+  // Miniature du plan (voir Viewport.capturerMiniature) : PAS embarquée en
+  // base64 dans le plan (même principe que le blueprint, voir
+  // js/blueprint.js) — téléversée à plat dans imports/, aux côtés des
+  // blueprints, sous <projet>_<plan>_mini.png ; seul ce chemin relatif est
+  // stocké dans le plan. Capturée en différé après chaque sauvegarde (pas à
+  // chaque frame de glisser un meuble) et réinjectée via une resauvegarde
+  // une fois prête — voir planifierCaptureMiniature(). Uniquement en
+  // MODE_FICHIERS : en MODE_LOCAL (file://) aucune écriture disque n'est
+  // possible depuis le navigateur (même limite que le blueprint), la
+  // miniature reste simplement absente. null tant qu'aucune capture n'a
+  // réussi.
+  let derniereMiniature = null;
+  let minutageMiniature = null;
+
+  function slugFichier(texte) {
+    return (texte || "").replace(/[^a-z0-9]+/gi, "_").toLowerCase() || "sans_nom";
+  }
+
+  function planifierCaptureMiniature() {
+    if (minutageMiniature) return;
+    if (Plans.mode !== Plans.MODE_FICHIERS) return;
+    minutageMiniature = setTimeout(async () => {
+      minutageMiniature = null;
+      try {
+        const blob = await Viewport.capturerMiniature();
+        if (!blob || !projetActuel || !planActuel) return;
+        const nomFichier = `${slugFichier(projetActuel.nom)}_${slugFichier(planActuel.nom)}_mini.png`;
+        const chemin = await Blueprint._televerser(new File([blob], nomFichier, { type: "image/png" }));
+        if (chemin && chemin !== derniereMiniature) {
+          derniereMiniature = chemin;
+          sauvegarderProjet(); // reprend construireProjet() avec la miniature à jour
+        }
+      } catch (erreur) {
+        // best-effort, voir Viewport.capturerMiniature / Blueprint._televerser
+      }
+    }, 1200);
   }
 
   // Sauvegarde toujours dans le filet de sécurité localStorage (marche
@@ -205,6 +244,7 @@
     Stockage.sauvegarder(projet);
     if (planActuel) Plans.sauvegarder(planActuel, projet);
     PropositionsStockage.sauvegarder(Propositions.liste);
+    planifierCaptureMiniature();
   }
 
   function sauvegarderCatalogue() {
@@ -225,6 +265,7 @@
     const { cheminImage, largeurPx, hauteurPx, echellePxParCm, origineX, origineY } = projet.plan;
     blueprintActuel = { chemin: cheminImage, largeurPx, hauteurPx };
     projetId = projet.id || crypto.randomUUID(); // reprend l'id existant, ou en génère un (anciens fichiers)
+    derniereMiniature = projet.miniature || null; // reprend celle déjà téléversée pour ce plan, évite une recapture immédiate
     Echelle.pxParCm = echellePxParCm || Echelle.PX_PAR_CM_DEFAUT;
     Origine.charger(origineX, origineY);
     Viewport.definirPlan(cheminImage, largeurPx, hauteurPx);

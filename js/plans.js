@@ -161,6 +161,7 @@ const Plans = {
         id: s.fichier,
         fichier: s.fichier,
         nom: s.nom || s.id || s.fichier,
+        miniature: s.miniature || null,
         modifie: (s.modifie || 0) * 1000
       }));
     } catch (erreur) {

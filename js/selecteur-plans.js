@@ -68,6 +68,8 @@ const SelecteurPlans = {
     const carte = document.createElement("div");
     carte.className = "plan-carte";
 
+    carte.appendChild(this._miniature(plan));
+
     const nom = document.createElement("div");
     nom.className = "plan-carte-nom";
     nom.textContent = plan.nom;
@@ -87,6 +89,24 @@ const SelecteurPlans = {
     carte.appendChild(this._actions(plan));
 
     return carte;
+  },
+
+  // Aperçu du plan (voir js/viewport.js, capturerMiniature()) — absent en
+  // MODE_LOCAL (file://, pas d'écriture disque possible) ou tant que la
+  // première capture n'a pas encore été téléversée : "?" à la place.
+  _miniature(plan) {
+    const conteneur = document.createElement("div");
+    conteneur.className = "plan-carte-miniature";
+    if (plan.miniature) {
+      const img = document.createElement("img");
+      img.src = plan.miniature;
+      img.alt = "";
+      conteneur.appendChild(img);
+    } else {
+      conteneur.classList.add("plan-carte-miniature-vide");
+      conteneur.textContent = "?";
+    }
+    return conteneur;
   },
 
   // Une pastille par proposition du projet (voir js/propositions.js) ayant

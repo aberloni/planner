@@ -45,6 +45,51 @@ const Viewport = {
     this.ecouteurs.push(callback);
   },
 
+  LARGEUR_MINIATURE: 320, // px, hauteur déduite du ratio réel du blueprint
+
+  // Génère une miniature PNG (Blob) du plan entier (fond + habillage +
+  // meubles), indépendamment du zoom/pan courant — téléversée dans imports/
+  // par l'appelant (voir js/app.js, planifierCaptureMiniature) pour les
+  // cartes de l'écran de choix de plan (js/selecteur-plans.js). Clone le SVG
+  // (pas touché à l'original), fige son viewBox sur le plan entier, retire
+  // les poignées de sélection (non pertinentes en miniature), puis rasterise
+  // via un <canvas>. Best-effort : peut échouer (rejette) en MODE_LOCAL
+  // (file://), le chargement d'image locale "tainted" le canvas dans la
+  // plupart des navigateurs — l'appelant doit tolérer l'échec.
+  async capturerMiniature() {
+    if (!this.largeurPlan || !this.hauteurPlan) return null;
+
+    const clone = this.svg.cloneNode(true);
+    clone.setAttribute("viewBox", `0 0 ${this.largeurPlan} ${this.hauteurPlan}`);
+    clone.setAttribute("width", this.largeurPlan);
+    clone.setAttribute("height", this.hauteurPlan);
+    clone.querySelectorAll(".poignee-rotation, .ligne-poignee-rotation, .poignee-taille").forEach((el) => el.remove());
+
+    const svgTexte = new XMLSerializer().serializeToString(clone);
+    const url = URL.createObjectURL(new Blob([svgTexte], { type: "image/svg+xml;charset=utf-8" }));
+
+    try {
+      const image = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("miniature: image SVG illisible"));
+        img.src = url;
+      });
+
+      const largeur = this.LARGEUR_MINIATURE;
+      const hauteur = Math.round(largeur * (this.hauteurPlan / this.largeurPlan));
+      const canvas = document.createElement("canvas");
+      canvas.width = largeur;
+      canvas.height = hauteur;
+      canvas.getContext("2d").drawImage(image, 0, 0, largeur, hauteur);
+      return await new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("miniature: rendu canvas impossible"))), "image/png");
+      });
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  },
+
   // Enregistre un callback appelé quand l'utilisateur clique sans faire glisser
   // (utile pour placer un point sans déclencher le pan). Reçoit les coordonnées
   // du clic converties dans le référentiel du plan.

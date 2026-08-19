@@ -21,6 +21,7 @@ foreach (glob($dossier . '/*.json') as $chemin) {
         'fichier' => basename($chemin),
         'id' => $donnees['id'] ?? pathinfo($chemin, PATHINFO_FILENAME),
         'nom' => $donnees['nom'] ?? null,
+        'miniature' => $donnees['miniature'] ?? null,
         'modifie' => filemtime($chemin)
     ];
 }
